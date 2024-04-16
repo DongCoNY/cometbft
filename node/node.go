@@ -692,6 +692,7 @@ func startStateSync(ssR *statesync.Reactor, bcR blockSyncReactor, conR *cs.React
 			// FIXME Very ugly to have these metrics bleed through here.
 			conR.Metrics.StateSyncing.Set(0)
 			conR.Metrics.BlockSyncing.Set(1)
+			conR.MetricsThreshold.MarkBlockSync()
 			err = bcR.SwitchToBlockSync(state)
 			if err != nil {
 				ssR.Logger.Error("Failed to switch to block sync", "err", err)
@@ -826,7 +827,9 @@ func NewNode(config *cfg.Config,
 	// FIXME We need to update metrics here, since other reactors don't have access to them.
 	if stateSync {
 		csMetrics.StateSyncing.Set(1)
+		csMetricsThreshold.MarkStateSync()
 	} else if blockSync {
+		csMetricsThreshold.MarkStateSync2()
 		csMetrics.BlockSyncing.Set(1)
 	}
 	consensusReactor, consensusState := createConsensusReactor(

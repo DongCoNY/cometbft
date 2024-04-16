@@ -125,9 +125,11 @@ func (conR *Reactor) SwitchToConsensus(state sm.State, skipWAL bool) {
 	conR.mtx.Lock()
 	conR.waitSync = false
 	conR.mtx.Unlock()
-	fmt.Println("vo vai lan")
+
 	conR.Metrics.BlockSyncing.Set(0)
 	conR.Metrics.StateSyncing.Set(0)
+
+	conR.MetricsThreshold.oldMetric.cacheSyncing.switchToConsensus = true
 
 	// conR.MetricsThreshold.oldMetric.cacheSyncing = true
 

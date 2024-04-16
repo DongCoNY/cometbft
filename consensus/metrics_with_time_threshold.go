@@ -1,7 +1,6 @@
 package consensus
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
@@ -62,9 +61,9 @@ type MetricsThreshold struct {
 	// The latest block height.
 	CommittedHeight metrics.Gauge `metrics_name:"latest_block_height"`
 	// Whether or not a node is block syncing. 1 if yes, 0 if no.
-	// BlockSyncing metrics.Gauge
+	BlockSyncing metrics.Gauge
 	// Whether or not a node is state syncing. 1 if yes, 0 if no.
-	// StateSyncing metrics.Gauge
+	StateSyncing metrics.Gauge
 
 	// Number of block parts transmitted by each peer.
 	BlockParts metrics.Counter `metrics_labels:"peer_id"`
@@ -154,11 +153,10 @@ type OldMetricsCache struct {
 
 	cacheProposalCreateCount cacheProposalCreateCount
 
-	// cacheSyncing bool
+	cacheSyncing cacheSyncing
 }
 
 func (m *MetricsThreshold) handleIfOutTime() {
-	fmt.Println("hannnnnnnnnnnn")
 	// ProposalProcessed
 	m.handleMarkProposalProcessed()
 
@@ -197,6 +195,8 @@ func (m *MetricsThreshold) handleIfOutTime() {
 	m.handleFullPrevoteDelay()
 
 	m.handleProposalCreateCount()
+
+	m.handleSyncing()
 
 }
 
@@ -324,7 +324,41 @@ type caheOldQuorumPrevoteDelay struct {
 	time float64
 }
 
-// type cacheSyncing struct {
-// 	blockSync bool
-// 	stateSync bool
-// }
+type cacheSyncing struct {
+	switchToConsensus bool
+	blockSync         bool
+	stateSync         bool
+	stateSync2        bool
+}
+
+func (m *MetricsThreshold) MarkStateSync() {
+	m.oldMetric.cacheSyncing.stateSync = true
+}
+
+func (m *MetricsThreshold) MarkStateSync2() {
+	m.oldMetric.cacheSyncing.stateSync2 = true
+}
+
+func (m *MetricsThreshold) MarkBlockSync() {
+	m.oldMetric.cacheSyncing.blockSync = true
+}
+
+func (m *MetricsThreshold) handleSyncing() {
+	if m.oldMetric.cacheSyncing.switchToConsensus {
+		m.BlockSyncing.Set(0)
+		m.StateSyncing.Set(0)
+	}
+
+	if m.oldMetric.cacheSyncing.blockSync {
+		m.StateSyncing.Set(0)
+		m.BlockSyncing.Set(1)
+	}
+
+	if m.oldMetric.cacheSyncing.stateSync {
+		m.StateSyncing.Set(1)
+	}
+
+	if m.oldMetric.cacheSyncing.stateSync2 {
+		m.BlockSyncing.Set(1)
+	}
+}

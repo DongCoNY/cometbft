@@ -535,6 +535,10 @@ func (cs *State) updateHeight(height int64) {
 		cs.metricsThreshold.IsOutTime = true
 		cs.metricsThreshold.handleIfOutTime()
 	}
+	cs.metricsThreshold.oldMetric.cacheSyncing.switchToConsensus = false
+	cs.metricsThreshold.oldMetric.cacheSyncing.blockSync = false
+	cs.metricsThreshold.oldMetric.cacheSyncing.stateSync = false
+	cs.metricsThreshold.oldMetric.cacheSyncing.stateSync2 = false
 
 	cs.metricsThreshold.oldMetric.cacheProposalCreateCount.noValidBlocks = false
 	cs.metricsThreshold.oldMetric.cacheProposalCreateCount.count = 0
@@ -2440,7 +2444,6 @@ func (cs *State) calculatePrevoteMessageDelayMetrics() {
 		votingPowerSeen += val.VotingPower
 		if votingPowerSeen >= cs.Validators.TotalVotingPower()*2/3+1 {
 			cs.metrics.QuorumPrevoteDelay.With("proposer_address", cs.Validators.GetProposer().Address.String()).Set(v.Timestamp.Sub(cs.Proposal.Timestamp).Seconds())
-			fmt.Println("lllllllllll")
 			cs.metricsThreshold.oldMetric.caheOldQuorumPrevoteDelay = append(cs.metricsThreshold.oldMetric.caheOldQuorumPrevoteDelay, caheOldQuorumPrevoteDelay{add: cs.Validators.GetProposer().Address.String(), time: v.Timestamp.Sub(cs.Proposal.Timestamp).Seconds()})
 			break
 		}
