@@ -113,20 +113,21 @@ func DefaultNewNode(config *cfg.Config, logger log.Logger) (*Node, error) {
 }
 
 // MetricsProvider returns a consensus, p2p and mempool Metrics.
-type MetricsProvider func(chainID string) (*cs.Metrics, *p2p.Metrics, *mempl.Metrics, *sm.Metrics, *proxy.Metrics)
+type MetricsProvider func(chainID string) (*cs.Metrics, *cs.MetricsThreshold, *p2p.Metrics, *mempl.Metrics, *sm.Metrics, *proxy.Metrics)
 
 // DefaultMetricsProvider returns Metrics build using Prometheus client library
 // if Prometheus is enabled. Otherwise, it returns no-op Metrics.
 func DefaultMetricsProvider(config *cfg.InstrumentationConfig) MetricsProvider {
-	return func(chainID string) (*cs.Metrics, *p2p.Metrics, *mempl.Metrics, *sm.Metrics, *proxy.Metrics) {
+	return func(chainID string) (*cs.Metrics, *cs.MetricsThreshold, *p2p.Metrics, *mempl.Metrics, *sm.Metrics, *proxy.Metrics) {
 		if config.Prometheus {
 			return cs.PrometheusMetrics(config.Namespace, "chain_id", chainID),
+				cs.PrometheusMetricsThreshold(config.Namespace, "chain_id", chainID),
 				p2p.PrometheusMetrics(config.Namespace, "chain_id", chainID),
 				mempl.PrometheusMetrics(config.Namespace, "chain_id", chainID),
 				sm.PrometheusMetrics(config.Namespace, "chain_id", chainID),
 				proxy.PrometheusMetrics(config.Namespace, "chain_id", chainID)
 		}
-		return cs.NopMetrics(), p2p.NopMetrics(), mempl.NopMetrics(), sm.NopMetrics(), proxy.NopMetrics()
+		return cs.NopMetrics(), cs.NopMetricsThreshold(), p2p.NopMetrics(), mempl.NopMetrics(), sm.NopMetrics(), proxy.NopMetrics()
 	}
 }
 
@@ -469,6 +470,7 @@ func createConsensusReactor(config *cfg.Config,
 	evidencePool *evidence.Pool,
 	privValidator types.PrivValidator,
 	csMetrics *cs.Metrics,
+	csMetricsThreshold *cs.MetricsThreshold,
 	waitSync bool,
 	eventBus *types.EventBus,
 	consensusLogger log.Logger,
@@ -481,12 +483,13 @@ func createConsensusReactor(config *cfg.Config,
 		mempool,
 		evidencePool,
 		cs.StateMetrics(csMetrics),
+		cs.StateMetricsThreshold(csMetricsThreshold),
 	)
 	consensusState.SetLogger(consensusLogger)
 	if privValidator != nil {
 		consensusState.SetPrivValidator(privValidator)
 	}
-	consensusReactor := cs.NewReactor(consensusState, waitSync, cs.ReactorMetrics(csMetrics))
+	consensusReactor := cs.NewReactor(consensusState, waitSync, cs.ReactorMetrics(csMetrics), cs.ReactorMetricsThreshold(csMetricsThreshold))
 	consensusReactor.SetLogger(consensusLogger)
 	// services which will be publishing and/or subscribing for messages (events)
 	// consensusReactor will set it on consensusState and blockExecutor
@@ -726,7 +729,7 @@ func NewNode(config *cfg.Config,
 		return nil, err
 	}
 
-	csMetrics, p2pMetrics, memplMetrics, smMetrics, abciMetrics := metricsProvider(genDoc.ChainID)
+	csMetrics, csMetricsThreshold, p2pMetrics, memplMetrics, smMetrics, abciMetrics := metricsProvider(genDoc.ChainID)
 
 	// Create the proxyApp and establish connections to the ABCI app (consensus, mempool, query).
 	proxyApp, err := createAndStartProxyAppConns(clientCreator, logger, abciMetrics)
@@ -828,7 +831,7 @@ func NewNode(config *cfg.Config,
 	}
 	consensusReactor, consensusState := createConsensusReactor(
 		config, state, blockExec, blockStore, mempool, evidencePool,
-		privValidator, csMetrics, stateSync || blockSync, eventBus, consensusLogger,
+		privValidator, csMetrics, csMetricsThreshold, stateSync || blockSync, eventBus, consensusLogger,
 	)
 
 	// Set up state sync reactor, and schedule a sync if requested.

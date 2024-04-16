@@ -46,7 +46,8 @@ type Reactor struct {
 	eventBus *types.EventBus
 	rs       *cstypes.RoundState
 
-	Metrics *Metrics
+	Metrics          *Metrics
+	MetricsThreshold *MetricsThreshold
 }
 
 type ReactorOption func(*Reactor)
@@ -124,8 +125,11 @@ func (conR *Reactor) SwitchToConsensus(state sm.State, skipWAL bool) {
 	conR.mtx.Lock()
 	conR.waitSync = false
 	conR.mtx.Unlock()
+	fmt.Println("vo vai lan")
 	conR.Metrics.BlockSyncing.Set(0)
 	conR.Metrics.StateSyncing.Set(0)
+
+	// conR.MetricsThreshold.oldMetric.cacheSyncing = true
 
 	if skipWAL {
 		conR.conS.doWALCatchup = false
@@ -329,6 +333,7 @@ func (conR *Reactor) ReceiveEnvelope(e p2p.Envelope) {
 		case *BlockPartMessage:
 			ps.SetHasProposalBlockPart(msg.Height, msg.Round, int(msg.Part.Index))
 			conR.Metrics.BlockParts.With("peer_id", string(e.Src.ID())).Add(1)
+			conR.MetricsThreshold.oldMetric.cacheBlockParts = append(conR.MetricsThreshold.oldMetric.cacheBlockParts, string(e.Src.ID()))
 			conR.conS.peerMsgQueue <- msgInfo{msg, e.Src.ID()}
 		default:
 			conR.Logger.Error(fmt.Sprintf("Unknown message type %v", reflect.TypeOf(msg)))
@@ -992,6 +997,11 @@ func (conR *Reactor) StringIndented(indent string) string {
 	}
 	s += indent + "}"
 	return s
+}
+
+// ReactorThresholdMetrics sets the metricsThreshold
+func ReactorMetricsThreshold(metricsThreshold *MetricsThreshold) ReactorOption {
+	return func(conR *Reactor) { conR.MetricsThreshold = metricsThreshold }
 }
 
 // ReactorMetrics sets the metrics
