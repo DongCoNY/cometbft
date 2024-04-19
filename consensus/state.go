@@ -2448,7 +2448,6 @@ func (cs *State) calculatePrevoteMessageDelayMetrics() {
 			break
 		}
 	}
-	fmt.Println("222222")
 	cs.metricsThreshold.oldMetric.cacheFullPrevoteDelay.isHasAll = false
 	if ps.HasAll() {
 		cs.metrics.FullPrevoteDelay.With("proposer_address", cs.Validators.GetProposer().Address.String()).Set(pl[len(pl)-1].Timestamp.Sub(cs.Proposal.Timestamp).Seconds())
@@ -2456,7 +2455,6 @@ func (cs *State) calculatePrevoteMessageDelayMetrics() {
 		cs.metricsThreshold.oldMetric.cacheFullPrevoteDelay.address = cs.Validators.GetProposer().Address.String()
 		cs.metricsThreshold.oldMetric.cacheFullPrevoteDelay.time = pl[len(pl)-1].Timestamp.Sub(cs.Proposal.Timestamp).Seconds()
 	}
-	fmt.Println("222222")
 }
 
 //---------------------------------------------------------
