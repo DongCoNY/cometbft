@@ -1,6 +1,8 @@
 package consensus
 
 import (
+	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -197,7 +199,6 @@ func (m *MetricsThreshold) handleIfOutTime() {
 	m.handleProposalCreateCount()
 
 	m.handleSyncing()
-
 }
 
 func (m *MetricsThreshold) MarkStep(s cstypes.RoundStepType) {
@@ -205,6 +206,8 @@ func (m *MetricsThreshold) MarkStep(s cstypes.RoundStepType) {
 		stepTime := time.Since(m.stepStart).Seconds()
 		stepName := strings.TrimPrefix(s.String(), "RoundStep")
 		m.StepDurationSeconds.With("step", stepName).Observe(stepTime)
+		markstep := NewStepMark(m.oldMetric.height, stepName, stepTime)
+		m.handCSVTimeSet(markstep)
 	}
 
 	m.stepStart = time.Now()
@@ -361,4 +364,40 @@ func (m *MetricsThreshold) handleSyncing() {
 	if m.oldMetric.cacheSyncing.stateSync2 {
 		m.BlockSyncing.Set(1)
 	}
+}
+
+type stepMark struct {
+	height   int64
+	stepName string
+	time     float64
+}
+
+func NewStepMark(height int64, stepName string, time float64) stepMark {
+	return stepMark{
+		height:   height,
+		stepName: stepName,
+		time:     time,
+	}
+}
+
+func (sm *stepMark) String() string {
+	return fmt.Sprintf("%d, %v, %v", sm.height, sm.stepName, sm.time)
+}
+
+func (m *MetricsThreshold) handCSVTimeSet(markstep stepMark) error {
+	a := markstep.String()
+
+	file, err := os.OpenFile("/Users/donglieu/terra-classic-cometbft/output.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+
+		return err
+	}
+	defer file.Close()
+
+	_, err = file.WriteString(a + "\n")
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
