@@ -129,7 +129,7 @@ func (conR *Reactor) SwitchToConsensus(state sm.State, skipWAL bool) {
 	conR.Metrics.BlockSyncing.Set(0)
 	conR.Metrics.StateSyncing.Set(0)
 
-	conR.MetricsThreshold.oldMetric.cacheSyncing.switchToConsensus = true
+	conR.MetricsThreshold.oldMetric.syncing.switchToConsensus = true
 
 	// conR.MetricsThreshold.oldMetric.cacheSyncing = true
 
@@ -335,7 +335,7 @@ func (conR *Reactor) ReceiveEnvelope(e p2p.Envelope) {
 		case *BlockPartMessage:
 			ps.SetHasProposalBlockPart(msg.Height, msg.Round, int(msg.Part.Index))
 			conR.Metrics.BlockParts.With("peer_id", string(e.Src.ID())).Add(1)
-			conR.MetricsThreshold.oldMetric.cacheBlockParts = append(conR.MetricsThreshold.oldMetric.cacheBlockParts, string(e.Src.ID()))
+			conR.MetricsThreshold.oldMetric.blockParts = append(conR.MetricsThreshold.oldMetric.blockParts, string(e.Src.ID()))
 			conR.conS.peerMsgQueue <- msgInfo{msg, e.Src.ID()}
 		default:
 			conR.Logger.Error(fmt.Sprintf("Unknown message type %v", reflect.TypeOf(msg)))

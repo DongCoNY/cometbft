@@ -116,46 +116,37 @@ type MetricsThreshold struct {
 	// in.
 	LateVotes metrics.Counter `metrics_labels:"vote_type"`
 
-	IsOutTime bool
-
-	timeOldHeight time.Time
-
+	// Time threshold is said to be timeout
 	timeThreshold time.Duration
-
-	oldMetric OldMetricsCache
+	// Time at the last height update
+	timeOldHeight time.Time
+	// Cache stores old metric values
+	oldMetric MetricsCache
 }
 
-type OldMetricsCache struct {
-	height                     int64
-	cacheMarkProposalProcessed bool
-	cacheMarkVoteReceived      []cacheMarkVoteReceived
-	cacheLateVote              []string
-	round                      int32
-	st                         time.Time
-
-	cacheValidatorPowerLastSignedMiss []MarkLabelVal
-	validatorsSize                    int
-	validatorsPower                   int64
-	missingValidators                 int
-	missingValidatorsPower            int64
-	byzantineValidatorsCount          int64
-	byzantineValidatorsPower          int64
-
-	numTxs         int
-	totalTxs       int
-	blockSizeBytes int
-
-	cacheBlockParts []string
-
-	cacheNotBlockGossipPartsReceived bool
-
-	caheOldQuorumPrevoteDelay []caheOldQuorumPrevoteDelay
-
-	cacheFullPrevoteDelay cacheFullPrevoteDelay
-
-	cacheProposalCreateCount cacheProposalCreateCount
-
-	cacheSyncing cacheSyncing
+type MetricsCache struct {
+	height                       int64
+	proposalProcessed            bool
+	voteReceived                 []cacheVoteReceived
+	lateVote                     []string
+	round                        int32
+	st                           time.Time
+	validatorPowerLastSignedMiss []cacheLabelVal
+	validatorsSize               int
+	validatorsPower              int64
+	missingValidators            int
+	missingValidatorsPower       int64
+	byzantineValidatorsCount     int64
+	byzantineValidatorsPower     int64
+	numTxs                       int
+	totalTxs                     int
+	blockSizeBytes               int
+	blockParts                   []string
+	notBlockGossipPartsReceived  bool
+	quorumPrevoteDelay           []caheOldQuorumPrevoteDelay
+	fullPrevoteDelay             cacheFullPrevoteDelay
+	proposalCreateCount          cacheProposalCreateCount
+	syncing                      cacheSyncing
 }
 
 func (m *MetricsThreshold) handleIfOutTime() {
@@ -225,7 +216,7 @@ func (m *MetricsThreshold) handleRoundOld() {
 	m.RoundVotingPowerPercent.With("vote_type", pcn).Set(0)
 }
 
-type MarkLabelVal struct {
+type cacheLabelVal struct {
 	markValidatorPower            bool
 	markValidatorLastSignedHeight bool
 	markValidatorMissedBlocks     bool
@@ -234,7 +225,7 @@ type MarkLabelVal struct {
 }
 
 func (m *MetricsThreshold) handleMarkValidatorPowerLastSignedMiss() {
-	for _, markLabel := range m.oldMetric.cacheValidatorPowerLastSignedMiss {
+	for _, markLabel := range m.oldMetric.validatorPowerLastSignedMiss {
 		if markLabel.markValidatorPower {
 			m.ValidatorPower.With(markLabel.label...).Set(float64(markLabel.votingPower))
 		}
@@ -250,28 +241,28 @@ func (m *MetricsThreshold) handleMarkValidatorPowerLastSignedMiss() {
 }
 
 func (m *MetricsThreshold) handleBlockParts() {
-	for _, id := range m.oldMetric.cacheBlockParts {
+	for _, id := range m.oldMetric.blockParts {
 		m.BlockParts.With("peer_id", id).Add(1)
 	}
 	// release memory
 }
 
 func (m *MetricsThreshold) handleLastVote() {
-	for _, value := range m.oldMetric.cacheLateVote {
+	for _, value := range m.oldMetric.lateVote {
 		m.LateVotes.With("vote_type", value).Add(1)
 	}
-	m.oldMetric.cacheLateVote = []string{}
+	m.oldMetric.lateVote = []string{}
 }
 
 func (m *MetricsThreshold) handleRoundVotingPowerPercent() {
-	for _, old := range m.oldMetric.cacheMarkVoteReceived {
+	for _, old := range m.oldMetric.voteReceived {
 		m.RoundVotingPowerPercent.With("vote_type", old.n).Add(old.p)
 	}
 	// release memory
 }
 
 func (m *MetricsThreshold) handleBlockGossipPartsReceived() {
-	if m.oldMetric.cacheNotBlockGossipPartsReceived {
+	if m.oldMetric.notBlockGossipPartsReceived {
 		m.BlockGossipPartsReceived.With("matches_current", "false").Add(1)
 	} else {
 		m.BlockGossipPartsReceived.With("matches_current", "true").Add(1)
@@ -280,7 +271,7 @@ func (m *MetricsThreshold) handleBlockGossipPartsReceived() {
 }
 
 func (m *MetricsThreshold) handleQuorumPrevoteDelay() {
-	for _, j := range m.oldMetric.caheOldQuorumPrevoteDelay {
+	for _, j := range m.oldMetric.quorumPrevoteDelay {
 		m.QuorumPrevoteDelay.With("proposer_address", j.add).Set(j.time)
 	}
 	// release memory
@@ -293,8 +284,8 @@ type cacheFullPrevoteDelay struct {
 }
 
 func (m *MetricsThreshold) handleFullPrevoteDelay() {
-	if m.oldMetric.cacheFullPrevoteDelay.isHasAll {
-		m.FullPrevoteDelay.With("proposer_address", m.oldMetric.cacheFullPrevoteDelay.address).Set(m.oldMetric.cacheFullPrevoteDelay.time)
+	if m.oldMetric.fullPrevoteDelay.isHasAll {
+		m.FullPrevoteDelay.With("proposer_address", m.oldMetric.fullPrevoteDelay.address).Set(m.oldMetric.fullPrevoteDelay.time)
 	}
 }
 
@@ -304,20 +295,20 @@ type cacheProposalCreateCount struct {
 }
 
 func (m *MetricsThreshold) handleProposalCreateCount() {
-	if m.oldMetric.cacheProposalCreateCount.noValidBlocks {
-		m.ProposalCreateCount.Add(float64(m.oldMetric.cacheProposalCreateCount.count))
+	if m.oldMetric.proposalCreateCount.noValidBlocks {
+		m.ProposalCreateCount.Add(float64(m.oldMetric.proposalCreateCount.count))
 	}
 }
 
 func (m *MetricsThreshold) handleMarkProposalProcessed() {
 	status := "accepted"
-	if !m.oldMetric.cacheMarkProposalProcessed {
+	if !m.oldMetric.proposalProcessed {
 		status = "rejected"
 	}
 	m.ProposalReceiveCount.With("status", status).Add(1)
 }
 
-type cacheMarkVoteReceived struct {
+type cacheVoteReceived struct {
 	n string
 	p float64
 }
@@ -335,33 +326,33 @@ type cacheSyncing struct {
 }
 
 func (m *MetricsThreshold) MarkStateSync() {
-	m.oldMetric.cacheSyncing.stateSync = true
+	m.oldMetric.syncing.stateSync = true
 }
 
 func (m *MetricsThreshold) MarkStateSync2() {
-	m.oldMetric.cacheSyncing.stateSync2 = true
+	m.oldMetric.syncing.stateSync2 = true
 }
 
 func (m *MetricsThreshold) MarkBlockSync() {
-	m.oldMetric.cacheSyncing.blockSync = true
+	m.oldMetric.syncing.blockSync = true
 }
 
 func (m *MetricsThreshold) handleSyncing() {
-	if m.oldMetric.cacheSyncing.switchToConsensus {
+	if m.oldMetric.syncing.switchToConsensus {
 		m.BlockSyncing.Set(0)
 		m.StateSyncing.Set(0)
 	}
 
-	if m.oldMetric.cacheSyncing.blockSync {
+	if m.oldMetric.syncing.blockSync {
 		m.StateSyncing.Set(0)
 		m.BlockSyncing.Set(1)
 	}
 
-	if m.oldMetric.cacheSyncing.stateSync {
+	if m.oldMetric.syncing.stateSync {
 		m.StateSyncing.Set(1)
 	}
 
-	if m.oldMetric.cacheSyncing.stateSync2 {
+	if m.oldMetric.syncing.stateSync2 {
 		m.BlockSyncing.Set(1)
 	}
 }
