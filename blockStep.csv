@@ -1,0 +1,4 @@
+height, NewHeight, NewRound, Propose, Prevote, PrevoteWait, Precommit, RoundStepPrecommitWait, Commit,
+0
+0,0,0,0.003381416,0.006072167,0.003201042,0,0.002417958,0
+24,20.000195083,0.005320542,0.00734875,0.003028583,0,0.002543208,0,0.011696125

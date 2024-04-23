@@ -531,7 +531,7 @@ func (cs *State) updateHeight(height int64) {
 	cs.Height = height
 
 	// if timeout
-	if time.Since(cs.metricsThreshold.timeOldHeight) >= cs.metricsThreshold.timeThreshold {
+	if time.Since(cs.metricsThreshold.timeOldHeight) >= defaultTimeThreshold {
 		cs.metricsThreshold.handleIfOutTime()
 	}
 	cs.metricsThreshold.oldMetric.syncing.switchToConsensus = false
@@ -539,10 +539,12 @@ func (cs *State) updateHeight(height int64) {
 	cs.metricsThreshold.oldMetric.syncing.stateSync = false
 	cs.metricsThreshold.oldMetric.syncing.stateSync2 = false
 
+	cs.metricsThreshold.oldMetric.step = NopCacheStep()
 	cs.metricsThreshold.oldMetric.proposalCreateCount.noValidBlocks = false
 	cs.metricsThreshold.oldMetric.proposalCreateCount.count = 0
 	cs.metricsThreshold.oldMetric.height = height
 	cs.metricsThreshold.timeOldHeight = time.Now()
+
 }
 
 func (cs *State) updateRoundStep(round int32, step cstypes.RoundStepType) {
@@ -554,6 +556,9 @@ func (cs *State) updateRoundStep(round int32, step cstypes.RoundStepType) {
 		}
 		if cs.Step != step {
 			cs.metrics.MarkStep(cs.Step)
+			if cs.metricsThreshold.oldMetric.step == nil {
+				cs.metricsThreshold.oldMetric.step = NopCacheStep()
+			}
 			cs.metricsThreshold.MarkStep(cs.Step)
 		}
 	}
@@ -683,6 +688,9 @@ func (cs *State) updateToState(state sm.State) {
 	cs.updateHeight(height)
 	cs.updateRoundStep(0, cstypes.RoundStepNewHeight)
 
+	if cs.Height == 24 {
+		time.Sleep(20 * time.Second)
+	}
 	if cs.CommitTime.IsZero() {
 		// "Now" makes it easier to sync up dev nodes.
 		// We add timeoutCommit to allow transactions
@@ -1891,9 +1899,7 @@ func (cs *State) recordMetrics(height int64, block *types.Block) {
 			cs.metrics.BlockIntervalSeconds.Observe(
 				block.Time.Sub(lastBlockMeta.Header.Time).Seconds(),
 			)
-			cs.metricsThreshold.BlockIntervalSeconds.Observe(
-				block.Time.Sub(lastBlockMeta.Header.Time).Seconds(),
-			)
+			cs.metricsThreshold.oldMetric.blockIntervalSeconds = block.Time.Sub(lastBlockMeta.Header.Time).Seconds()
 		}
 	}
 

@@ -1,8 +1,10 @@
 package consensus
 
 import (
-	"fmt"
+	"encoding/csv"
 	"os"
+	"strconv"
+
 	"strings"
 	"time"
 
@@ -147,6 +149,8 @@ type MetricsCache struct {
 	fullPrevoteDelay             cacheFullPrevoteDelay
 	proposalCreateCount          cacheProposalCreateCount
 	syncing                      cacheSyncing
+	blockIntervalSeconds         float64
+	step                         map[string]float64
 }
 
 func (m *MetricsThreshold) handleIfOutTime() {
@@ -178,27 +182,45 @@ func (m *MetricsThreshold) handleIfOutTime() {
 	m.TotalTxs.Add(float64(m.oldMetric.totalTxs))
 	m.BlockSizeBytes.Set(float64(m.oldMetric.blockSizeBytes))
 	m.CommittedHeight.Set(float64(m.oldMetric.height))
+	m.BlockIntervalSeconds.Observe(m.oldMetric.blockIntervalSeconds)
 
 	m.handleBlockParts()
-
 	m.handleBlockGossipPartsReceived()
-
 	m.handleQuorumPrevoteDelay()
-
 	m.handleFullPrevoteDelay()
-
 	m.handleProposalCreateCount()
-
 	m.handleSyncing()
+	m.handleStepDurationSeconds()
+
+	m.handleWriteToFileCSVForEachHeight()
+	m.handCSVTimeSet()
+}
+
+func NopCacheStep() map[string]float64 {
+	step := make(map[string]float64, 0)
+	step["NewHeight"] = 0
+	step["NewRound"] = 0
+	step["Propose"] = 0
+	step["Prevote"] = 0
+	step["PrevoteWait"] = 0
+	step["Precommit"] = 0
+	step["RoundStepPrecommitWait"] = 0
+	step["Commit"] = 0
+
+	return step
+}
+
+func (m *MetricsThreshold) handleStepDurationSeconds() {
+	for stepName, stepTime := range m.oldMetric.step {
+		m.StepDurationSeconds.With("step", stepName).Observe(stepTime)
+	}
 }
 
 func (m *MetricsThreshold) MarkStep(s cstypes.RoundStepType) {
 	if !m.stepStart.IsZero() {
 		stepTime := time.Since(m.stepStart).Seconds()
 		stepName := strings.TrimPrefix(s.String(), "RoundStep")
-		m.StepDurationSeconds.With("step", stepName).Observe(stepTime)
-		markstep := NewStepMark(m.oldMetric.height, stepName, stepTime)
-		m.handCSVTimeSet(markstep)
+		m.oldMetric.step[stepName] = stepTime
 	}
 
 	m.stepStart = time.Now()
@@ -357,38 +379,89 @@ func (m *MetricsThreshold) handleSyncing() {
 	}
 }
 
-type stepMark struct {
-	height   int64
-	stepName string
-	time     float64
-}
-
-func NewStepMark(height int64, stepName string, time float64) stepMark {
-	return stepMark{
-		height:   height,
-		stepName: stepName,
-		time:     time,
-	}
-}
-
-func (sm *stepMark) String() string {
-	return fmt.Sprintf("%d, %v, %v", sm.height, sm.stepName, sm.time)
-}
-
-func (m *MetricsThreshold) handCSVTimeSet(markstep stepMark) error {
-	a := markstep.String()
-
-	file, err := os.OpenFile("/Users/donglieu/terra-classic-cometbft/output.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+func (m *MetricsThreshold) handCSVTimeSet() error {
+	file, err := os.OpenFile("/Users/donglieu/terra-classic-cometbft/blockStep.csv", os.O_WRONLY|os.O_APPEND, os.ModeAppend)
 	if err != nil {
 
 		return err
 	}
 	defer file.Close()
 
-	_, err = file.WriteString(a + "\n")
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	err = writer.Write(m.oldMetric.StringForEachStep())
 	if err != nil {
 		return err
 	}
-
 	return nil
+}
+
+func (m MetricsThreshold) handleWriteToFileCSVForEachHeight() error {
+	file, err := os.OpenFile("/Users/donglieu/terra-classic-cometbft/block.csv", os.O_WRONLY|os.O_APPEND, os.ModeAppend)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	err = writer.Write(m.oldMetric.StringForEachHeight())
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m MetricsCache) StringForEachHeight() []string {
+	forheight := []string{}
+	// Height,
+	forheight = append(forheight, strconv.FormatInt(m.height, 10))
+	// Rounds,
+	forheight = append(forheight, strconv.Itoa(int(m.round)))
+	// BlockIntervalSeconds,
+	forheight = append(forheight, strconv.FormatFloat(m.blockIntervalSeconds, 'f', -1, 64))
+	// NumTxs,
+	forheight = append(forheight, strconv.Itoa(m.numTxs))
+	// BlockSizeBytes,
+	forheight = append(forheight, strconv.Itoa(m.blockSizeBytes))
+	// BlockParts,
+	forheight = append(forheight, strconv.Itoa(len(m.blockParts)))
+	forheight = append(forheight, m.blockParts...)
+	// BlockGossipPartsReceived
+	if m.notBlockGossipPartsReceived {
+		forheight = append(forheight, "false")
+	} else {
+		forheight = append(forheight, "true")
+	}
+	// QuorumPrevoteDelay,
+	forheight = append(forheight, strconv.Itoa(len(m.quorumPrevoteDelay)))
+	for _, j := range m.quorumPrevoteDelay {
+		forheight = append(forheight, j.add)
+		forheight = append(forheight, strconv.FormatFloat(j.time, 'f', -1, 64))
+	}
+
+	// FullPrevoteDelay,
+	forheight = append(forheight, strconv.FormatBool(m.fullPrevoteDelay.isHasAll), m.fullPrevoteDelay.address, strconv.FormatFloat(m.fullPrevoteDelay.time, 'f', -1, 64))
+	// ProposalReceiveCount,
+	status := "accepted"
+	if !m.proposalProcessed {
+		status = "rejected"
+	}
+	forheight = append(forheight, status)
+	// LateVotes
+	forheight = append(forheight, strconv.Itoa(len(m.lateVote)))
+	forheight = append(forheight, m.lateVote...)
+
+	return forheight
+}
+
+func (m MetricsCache) StringForEachStep() []string {
+	forStep := []string{strconv.FormatInt(m.height, 10)}
+
+	for _, timeStep := range m.step {
+		forStep = append(forStep, strconv.FormatFloat(timeStep, 'f', -1, 64))
+	}
+	return forStep
 }
