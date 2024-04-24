@@ -569,7 +569,7 @@ func removeDuplicates(s []uint32) []uint32 {
 	result := []uint32{}
 
 	for _, v := range s {
-		if encountered[v] == false {
+		if !encountered[v] {
 			encountered[v] = true
 			result = append(result, v)
 		}
