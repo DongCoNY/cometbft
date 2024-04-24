@@ -1,0 +1,4 @@
+height, round-id, total-power, missed-power-prevoteStep, missed-power-precommitStep
+0,0,0,0,0
+0,0,10,0,0
+24,0,10,0,0

@@ -127,33 +127,41 @@ type MetricsThreshold struct {
 }
 
 type MetricsCache struct {
-	height                       int64
-	proposalProcessed            bool
+	height                      int64
+	round                       int32
+	numTxs                      int
+	blockSizeBytes              int
+	blockIntervalSeconds        float64
+	proposalProcessed           bool
+	blockPartsReceived          []uint32
+	notBlockGossipPartsReceived bool
+	quorumPrevoteDelay          []caheOldQuorumPrevoteDelay
+	fullPrevoteDelay            cacheFullPrevoteDelay
+	lateVote                    []string
+
+	validatorsPower               int64
+	missingValidatorsPower        int64
+	missingValidatorsPowerPrevote int64
+
+	blockPartsToTal uint32
+	blockParts      []uint32
+
 	voteReceived                 []cacheVoteReceived
-	lateVote                     []string
-	round                        int32
 	st                           time.Time
 	validatorPowerLastSignedMiss []cacheLabelVal
 	validatorsSize               int
-	validatorsPower              int64
 	missingValidators            int
-	missingValidatorsPower       int64
 	byzantineValidatorsCount     int64
 	byzantineValidatorsPower     int64
-	numTxs                       int
 	totalTxs                     int
-	blockSizeBytes               int
-	blockParts                   []string
-	notBlockGossipPartsReceived  bool
-	quorumPrevoteDelay           []caheOldQuorumPrevoteDelay
-	fullPrevoteDelay             cacheFullPrevoteDelay
-	proposalCreateCount          cacheProposalCreateCount
-	syncing                      cacheSyncing
-	blockIntervalSeconds         float64
-	step                         map[string]float64
+
+	proposalCreateCount cacheProposalCreateCount
+	syncing             cacheSyncing
+	step                map[string]float64
 }
 
 func (m *MetricsThreshold) handleIfOutTime() {
+	m.oldMetric.blockParts = removeDuplicates(m.oldMetric.blockParts)
 	// ProposalProcessed
 	m.handleMarkProposalProcessed()
 
@@ -194,6 +202,8 @@ func (m *MetricsThreshold) handleIfOutTime() {
 
 	m.handleWriteToFileCSVForEachHeight()
 	m.handCSVTimeSet()
+	m.handleWriteToFileCSVForVoteStep()
+	m.handleWriteToFileCSVForProposalStep()
 }
 
 func NopCacheStep() map[string]float64 {
@@ -263,8 +273,8 @@ func (m *MetricsThreshold) handleMarkValidatorPowerLastSignedMiss() {
 }
 
 func (m *MetricsThreshold) handleBlockParts() {
-	for _, id := range m.oldMetric.blockParts {
-		m.BlockParts.With("peer_id", id).Add(1)
+	for _, id := range m.oldMetric.blockPartsReceived {
+		m.BlockParts.With("peer_id", strconv.FormatInt(int64(id), 10)).Add(1)
 	}
 	// release memory
 }
@@ -414,6 +424,40 @@ func (m MetricsThreshold) handleWriteToFileCSVForEachHeight() error {
 	return nil
 }
 
+func (m MetricsThreshold) handleWriteToFileCSVForVoteStep() error {
+	file, err := os.OpenFile("/Users/donglieu/terra-classic-cometbft/blockVoteStep.csv", os.O_WRONLY|os.O_APPEND, os.ModeAppend)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	err = writer.Write(m.oldMetric.StringForVotingPrecommitStep())
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m MetricsThreshold) handleWriteToFileCSVForProposalStep() error {
+	file, err := os.OpenFile("/Users/donglieu/terra-classic-cometbft/blockProposalStep.csv", os.O_WRONLY|os.O_APPEND, os.ModeAppend)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	err = writer.Write(m.oldMetric.StringForProposalStep())
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (m MetricsCache) StringForEachHeight() []string {
 	forheight := []string{}
 	// Height,
@@ -427,8 +471,12 @@ func (m MetricsCache) StringForEachHeight() []string {
 	// BlockSizeBytes,
 	forheight = append(forheight, strconv.Itoa(m.blockSizeBytes))
 	// BlockParts,
-	forheight = append(forheight, strconv.Itoa(len(m.blockParts)))
-	forheight = append(forheight, m.blockParts...)
+	forheight = append(forheight, strconv.Itoa(len(m.blockPartsReceived)))
+
+	for _, value := range m.blockPartsReceived {
+		forheight = append(forheight, strconv.FormatInt(int64(value), 10))
+	}
+
 	// BlockGossipPartsReceived
 	if m.notBlockGossipPartsReceived {
 		forheight = append(forheight, "false")
@@ -464,4 +512,68 @@ func (m MetricsCache) StringForEachStep() []string {
 		forStep = append(forStep, strconv.FormatFloat(timeStep, 'f', -1, 64))
 	}
 	return forStep
+}
+
+func (m MetricsCache) StringForVotingPrecommitStep() []string {
+	forheight := []string{}
+
+	forheight = append(forheight, strconv.FormatInt(m.height, 10))
+	forheight = append(forheight, strconv.Itoa(int(m.round)))
+
+	forheight = append(forheight, strconv.FormatInt(m.validatorsPower, 10))
+	forheight = append(forheight, strconv.FormatInt(m.missingValidatorsPowerPrevote, 10))
+	forheight = append(forheight, strconv.FormatInt(m.missingValidatorsPower, 10))
+
+	return forheight
+}
+
+func (m MetricsCache) StringForProposalStep() []string {
+	forheight := []string{}
+
+	forheight = append(forheight, strconv.FormatInt(m.height, 10))
+	forheight = append(forheight, strconv.Itoa(int(m.round)))
+
+	forheight = append(forheight, strconv.Itoa(len(m.blockPartsReceived)))
+	for _, value := range m.blockPartsReceived {
+		forheight = append(forheight, strconv.FormatInt(int64(value), 10))
+	}
+
+	edundantBlockpartsReceived := filterSlice(m.blockParts, m.blockPartsReceived)
+	forheight = append(forheight, strconv.Itoa(len(edundantBlockpartsReceived)))
+	forheight = append(forheight, edundantBlockpartsReceived...)
+
+	forheight = append(forheight, strconv.FormatInt(int64(m.blockPartsToTal), 10))
+	return forheight
+}
+
+func filterSlice(a, b []uint32) []string {
+	result := []string{}
+
+	// Create a map to store the elements of slice b for quick inspection
+	bMap := make(map[uint32]bool)
+	for _, v := range b {
+		bMap[v] = true
+	}
+	// Filter elements of slice a
+	for _, v := range a {
+		if !bMap[v] {
+			result = append(result, strconv.FormatInt(int64(v), 10))
+		}
+	}
+
+	return result
+}
+
+func removeDuplicates(s []uint32) []uint32 {
+	encountered := map[uint32]bool{}
+	result := []uint32{}
+
+	for _, v := range s {
+		if encountered[v] == false {
+			encountered[v] = true
+			result = append(result, v)
+		}
+	}
+
+	return result
 }

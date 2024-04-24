@@ -556,6 +556,7 @@ func (cs *State) updateRoundStep(round int32, step cstypes.RoundStepType) {
 		}
 		if cs.Step != step {
 			cs.metrics.MarkStep(cs.Step)
+
 			if cs.metricsThreshold.oldMetric.step == nil {
 				cs.metricsThreshold.oldMetric.step = NopCacheStep()
 			}
@@ -1209,11 +1210,13 @@ func (cs *State) defaultDecideProposal(height int64, round int32) {
 		// send proposal and block parts on internal msg queue
 		cs.sendInternalMessage(msgInfo{&ProposalMessage{proposal}, ""})
 
+		cs.metricsThreshold.oldMetric.blockPartsToTal = blockParts.Total()
 		for i := 0; i < int(blockParts.Total()); i++ {
 			part := blockParts.GetPart(i)
 			cs.sendInternalMessage(msgInfo{&BlockPartMessage{cs.Height, cs.Round, part}, ""})
-		}
 
+			cs.metricsThreshold.oldMetric.blockParts = append(cs.metricsThreshold.oldMetric.blockParts, part.Index)
+		}
 		cs.Logger.Debug("signed proposal", "height", height, "round", round, "proposal", proposal)
 	} else if !cs.replayMode {
 		cs.Logger.Error("propose step; failed signing proposal", "height", height, "round", round, "err", err)
@@ -1303,6 +1306,17 @@ func (cs *State) enterPrevote(height int64, round int32) {
 	// Sign and broadcast vote as necessary
 	cs.doPrevote(height, round)
 
+	var missingValidatorsPower int64
+	for i, val := range cs.LastValidators.Validators {
+		commitSig := cs.ProposalBlock.LastCommit.Signatures[i]
+		if commitSig.Absent() {
+			missingValidatorsPower += val.VotingPower
+		}
+	}
+
+	cs.metricsThreshold.oldMetric.missingValidatorsPowerPrevote = missingValidatorsPower
+
+	// cs.
 	// Once `addVote` hits any +2/3 prevotes, we will go to PrevoteWait
 	// (so we have more time to try and collect +2/3 prevotes for a single block)
 }
