@@ -3,6 +3,7 @@ package consensus
 import (
 	"encoding/csv"
 	"os"
+	"path/filepath"
 	"strconv"
 
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"github.com/go-kit/kit/metrics"
 
 	cstypes "github.com/cometbft/cometbft/consensus/types"
+	cmtos "github.com/cometbft/cometbft/libs/os"
 	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
 )
 
@@ -19,6 +21,40 @@ const (
 	// package.
 	MetricsThresholdSubsystem = "2consensus2"
 )
+
+var (
+	pathblockProposalStep string
+	pathblockVoteStep     string
+	pathblock             string
+	pathblockOnlyTimeStep string
+)
+
+func init() {
+	home, _ := os.UserHomeDir()
+
+	metricspath := filepath.Join(home, "metrics")
+	if !cmtos.FileExists(metricspath) {
+		// create dir metrics
+		os.MkdirAll(metricspath, os.ModePerm)
+
+		// create files
+		pathblockProposalStep = metricspath + "/blockProposalStep.csv"
+		file1, _ := os.Create(pathblockProposalStep)
+		defer file1.Close()
+
+		pathblockVoteStep = metricspath + "/blockVoteStep.csv"
+		file2, _ := os.Create(pathblockVoteStep)
+		defer file2.Close()
+
+		pathblock = metricspath + "/block.csv"
+		file3, _ := os.Create(pathblock)
+		defer file3.Close()
+
+		pathblockOnlyTimeStep = metricspath + "/blockOnlyTimeStep.csv"
+		file4, _ := os.Create(pathblockOnlyTimeStep)
+		defer file4.Close()
+	}
+}
 
 //go:generate go run ../scripts/metricsgen -struct=Metrics
 
@@ -390,7 +426,7 @@ func (m *MetricsThreshold) handleSyncing() {
 }
 
 func (m *MetricsThreshold) handCSVTimeSet() error {
-	file, err := os.OpenFile("/Users/donglieu/terra-classic-cometbft/blockStep.csv", os.O_WRONLY|os.O_APPEND, os.ModeAppend)
+	file, err := os.OpenFile(pathblockOnlyTimeStep, os.O_WRONLY|os.O_APPEND, os.ModeAppend)
 	if err != nil {
 
 		return err
@@ -408,7 +444,7 @@ func (m *MetricsThreshold) handCSVTimeSet() error {
 }
 
 func (m MetricsThreshold) handleWriteToFileCSVForEachHeight() error {
-	file, err := os.OpenFile("/Users/donglieu/terra-classic-cometbft/block.csv", os.O_WRONLY|os.O_APPEND, os.ModeAppend)
+	file, err := os.OpenFile(pathblock, os.O_WRONLY|os.O_APPEND, os.ModeAppend)
 	if err != nil {
 		return err
 	}
@@ -425,7 +461,7 @@ func (m MetricsThreshold) handleWriteToFileCSVForEachHeight() error {
 }
 
 func (m MetricsThreshold) handleWriteToFileCSVForVoteStep() error {
-	file, err := os.OpenFile("/Users/donglieu/terra-classic-cometbft/blockVoteStep.csv", os.O_WRONLY|os.O_APPEND, os.ModeAppend)
+	file, err := os.OpenFile(pathblockVoteStep, os.O_WRONLY|os.O_APPEND, os.ModeAppend)
 	if err != nil {
 		return err
 	}
@@ -442,7 +478,7 @@ func (m MetricsThreshold) handleWriteToFileCSVForVoteStep() error {
 }
 
 func (m MetricsThreshold) handleWriteToFileCSVForProposalStep() error {
-	file, err := os.OpenFile("/Users/donglieu/terra-classic-cometbft/blockProposalStep.csv", os.O_WRONLY|os.O_APPEND, os.ModeAppend)
+	file, err := os.OpenFile(pathblockProposalStep, os.O_WRONLY|os.O_APPEND, os.ModeAppend)
 	if err != nil {
 		return err
 	}
