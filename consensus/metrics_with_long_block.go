@@ -2,6 +2,7 @@ package consensus
 
 import (
 	"encoding/csv"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -11,6 +12,7 @@ import (
 
 	cstypes "github.com/cometbft/cometbft/consensus/types"
 	cmtos "github.com/cometbft/cometbft/libs/os"
+	"github.com/cometbft/cometbft/p2p"
 )
 
 var (
@@ -18,6 +20,7 @@ var (
 	pathBlockVoteStep     string
 	pathBlock             string
 	pathBlockOnlyTimeStep string
+	pathBlockP2P          string
 )
 
 func init() {
@@ -44,11 +47,16 @@ func init() {
 		pathBlockOnlyTimeStep = metricspath + "/blockOnlyTimeStep.csv"
 		file4, _ := os.Create(pathBlockOnlyTimeStep)
 		defer file4.Close()
+
+		pathBlockP2P = metricspath + "/blockP2P.csv"
+		file5, _ := os.Create(pathBlockP2P)
+		defer file5.Close()
 	} else {
 		pathBlockProposalStep = metricspath + "/blockProposalStep.csv"
 		pathBlockVoteStep = metricspath + "/blockVoteStep.csv"
 		pathBlock = metricspath + "/block.csv"
 		pathBlockOnlyTimeStep = metricspath + "/blockOnlyTimeStep.csv"
+		pathBlockP2P = metricspath + "/blockP2P.csv"
 	}
 }
 
@@ -71,13 +79,13 @@ type MetricsThreshold struct {
 }
 
 type metricsCache struct {
-	height                      int64
-	round                       int32
-	numTxs                      int
-	blockSizeBytes              int
-	blockIntervalSeconds        float64
-	proposalProcessed           bool
-	blockPartsReceived          []uint32
+	height               int64
+	round                int32
+	numTxs               int
+	blockSizeBytes       int
+	blockIntervalSeconds float64
+	proposalProcessed    bool
+
 	notBlockGossipPartsReceived []bool
 	quorumPrevoteDelay          []caheOldQuorumPrevoteDelay
 	fullPrevoteDelay            cacheFullPrevoteDelay
@@ -87,11 +95,13 @@ type metricsCache struct {
 	missingValidatorsPower        int64
 	missingValidatorsPowerPrevote int64
 
-	blockPartsToTal uint32
-	blockParts      []uint32
+	numblockParts      uint32
+	blockParts         []uint32
+	blockPartsReceived []uint32
 
 	proposalCreateCount cacheProposalCreateCount
 
+	// step name and duration step
 	steps map[string]float64
 }
 
@@ -102,17 +112,18 @@ func (m *MetricsThreshold) handleIfOutTime() {
 	m.handCSVTimeSet()
 	m.handleWriteToFileCSVForVoteStep()
 	m.handleWriteToFileCSVForProposalStep()
+	m.handleP2P()
 }
 
 func NopCacheMetricsCache() metricsCache {
 	return metricsCache{
-		height:                      -1,
-		round:                       -1,
-		numTxs:                      -1,
-		blockSizeBytes:              -1,
-		blockIntervalSeconds:        -1.0,
-		proposalProcessed:           false,
-		blockPartsReceived:          []uint32{},
+		height:               -1,
+		round:                -1,
+		numTxs:               -1,
+		blockSizeBytes:       -1,
+		blockIntervalSeconds: -1.0,
+		proposalProcessed:    false,
+
 		notBlockGossipPartsReceived: []bool{},
 		quorumPrevoteDelay:          []caheOldQuorumPrevoteDelay{},
 		fullPrevoteDelay:            cacheFullPrevoteDelay{},
@@ -122,8 +133,9 @@ func NopCacheMetricsCache() metricsCache {
 		missingValidatorsPower:        -1,
 		missingValidatorsPowerPrevote: -1,
 
-		blockPartsToTal: 0,
-		blockParts:      []uint32{},
+		numblockParts:      0,
+		blockParts:         []uint32{},
+		blockPartsReceived: []uint32{},
 
 		proposalCreateCount: cacheProposalCreateCount{},
 
@@ -248,6 +260,35 @@ func (m MetricsThreshold) handleWriteToFileCSVForProposalStep() error {
 	return nil
 }
 
+func (m MetricsThreshold) handleP2P() error {
+	file, err := os.OpenFile(pathBlockP2P, os.O_WRONLY|os.O_APPEND, os.ModeAppend)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	for _, j := range p2p.ToStrings() {
+		fmt.Println("222222")
+		n := []string{}
+		// Height,
+		n = append(n, strconv.FormatInt(m.metricsCache.height, 10))
+		// Rounds,
+		n = append(n, strconv.Itoa(int(m.metricsCache.round)))
+
+		n = append(n, j...)
+
+		err = writer.Write(n)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (m metricsCache) StringForEachHeight() []string {
 	forheight := []string{}
 	// Height,
@@ -334,7 +375,7 @@ func (m metricsCache) StringForProposalStep() []string {
 	forheight = append(forheight, strconv.Itoa(len(edundantBlockpartsReceived)))
 	forheight = append(forheight, edundantBlockpartsReceived...)
 
-	forheight = append(forheight, strconv.FormatInt(int64(m.blockPartsToTal), 10))
+	forheight = append(forheight, strconv.FormatInt(int64(m.numblockParts), 10))
 	return forheight
 }
 

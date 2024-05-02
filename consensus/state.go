@@ -529,6 +529,7 @@ func (cs *State) updateHeight(height int64) {
 		cs.metricsThreshold.handleIfOutTime()
 	}
 	// resets cache
+	p2p.ResetCacheMetrics()
 	cs.metricsThreshold.metricsCache.notBlockGossipPartsReceived = []bool{}
 
 	cs.metricsThreshold.metricsCache.steps = NopCacheStep()
@@ -1201,7 +1202,7 @@ func (cs *State) defaultDecideProposal(height int64, round int32) {
 		// send proposal and block parts on internal msg queue
 		cs.sendInternalMessage(msgInfo{&ProposalMessage{proposal}, ""})
 
-		cs.metricsThreshold.metricsCache.blockPartsToTal = blockParts.Total()
+		cs.metricsThreshold.metricsCache.numblockParts = blockParts.Total()
 		for i := 0; i < int(blockParts.Total()); i++ {
 			part := blockParts.GetPart(i)
 			cs.sendInternalMessage(msgInfo{&BlockPartMessage{cs.Height, cs.Round, part}, ""})

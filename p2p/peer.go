@@ -290,6 +290,15 @@ func (p *peer) send(chID byte, msg proto.Message, sendFunc func(byte, []byte) bo
 		}
 		p.metrics.PeerSendBytesTotal.With(labels...).Add(float64(len(msgBytes)))
 		p.metrics.MessageSendBytesTotal.With("message_type", metricLabelValue).Add(float64(len(msgBytes)))
+
+		n := cacheMetricsMsg{
+			fromPeer: string(p.ID()),
+			typeIs:   metricLabelValue,
+			size:     len(msgBytes),
+			chID:     fmt.Sprintf("%#x", chID),
+		}
+		CacheMetricLongBlock = append(CacheMetricLongBlock, n)
+
 	}
 	return res
 }
