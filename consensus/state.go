@@ -217,11 +217,6 @@ func StateMetrics(metrics *Metrics) StateOption {
 	return func(cs *State) { cs.metrics = metrics }
 }
 
-// StateMetricsThreshold sets the MetricsThreshold.
-func StateMetricsThreshold(metricsThreshold *MetricsThreshold) StateOption {
-	return func(cs *State) { cs.metricsThreshold = metricsThreshold }
-}
-
 // String returns a string.
 func (cs *State) String() string {
 	// better not to access shared variables
@@ -527,20 +522,16 @@ func (cs *State) SetProposalAndBlock(
 
 func (cs *State) updateHeight(height int64) {
 	cs.metrics.Height.Set(float64(height))
-	cs.metricsThreshold.Height.Set(float64(height))
 	cs.Height = height
 
 	// if timeout
-	if time.Since(cs.metricsThreshold.timeOldHeight) >= defaultTimeThreshold {
+	if time.Since(cs.metricsThreshold.timeOldHeight) >= cs.metricsThreshold.timeThreshold {
 		cs.metricsThreshold.handleIfOutTime()
 	}
-	cs.metricsThreshold.metricsCache.syncing.switchToConsensus = false
-	cs.metricsThreshold.metricsCache.syncing.blockSync = false
-	cs.metricsThreshold.metricsCache.syncing.stateSync = false
-	cs.metricsThreshold.metricsCache.syncing.stateSync2 = false
+	// resets cache
 	cs.metricsThreshold.metricsCache.notBlockGossipPartsReceived = []bool{}
 
-	cs.metricsThreshold.metricsCache.step = NopCacheStep()
+	cs.metricsThreshold.metricsCache.steps = NopCacheStep()
 	cs.metricsThreshold.metricsCache.proposalCreateCount.noValidBlocks = false
 	cs.metricsThreshold.metricsCache.proposalCreateCount.count = 0
 	cs.metricsThreshold.metricsCache.height = height
@@ -553,13 +544,12 @@ func (cs *State) updateRoundStep(round int32, step cstypes.RoundStepType) {
 		if round != cs.Round || round == 0 && step == cstypes.RoundStepNewRound {
 			cs.metrics.MarkRound(cs.Round, cs.StartTime)
 			cs.metricsThreshold.metricsCache.round = cs.Round
-			cs.metricsThreshold.metricsCache.st = cs.StartTime
 		}
 		if cs.Step != step {
 			cs.metrics.MarkStep(cs.Step)
 
-			if cs.metricsThreshold.metricsCache.step == nil {
-				cs.metricsThreshold.metricsCache.step = NopCacheStep()
+			if cs.metricsThreshold.metricsCache.steps == nil {
+				cs.metricsThreshold.metricsCache.steps = NopCacheStep()
 			}
 			cs.metricsThreshold.MarkStep(cs.Step)
 		}
@@ -1820,7 +1810,6 @@ func (cs *State) pruneBlocks(retainHeight int64) (uint64, error) {
 
 func (cs *State) recordMetrics(height int64, block *types.Block) {
 	cs.metrics.Validators.Set(float64(cs.Validators.Size()))
-	cs.metricsThreshold.metricsCache.validatorsSize = cs.Validators.Size()
 
 	cs.metrics.ValidatorsPower.Set(float64(cs.Validators.TotalVotingPower()))
 	cs.metricsThreshold.metricsCache.validatorsPower = cs.Validators.TotalVotingPower()
@@ -1879,14 +1868,12 @@ func (cs *State) recordMetrics(height int64, block *types.Block) {
 					mark.markValidatorMissedBlocks = true
 				}
 			}
-			cs.metricsThreshold.metricsCache.validatorPowerLastSignedMiss = append(cs.metricsThreshold.metricsCache.validatorPowerLastSignedMiss, mark)
 
 		}
 	}
 	cs.metrics.MissingValidators.Set(float64(missingValidators))
 	cs.metrics.MissingValidatorsPower.Set(float64(missingValidatorsPower))
 
-	cs.metricsThreshold.metricsCache.missingValidators = missingValidators
 	cs.metricsThreshold.metricsCache.missingValidatorsPower = missingValidatorsPower
 
 	// NOTE: byzantine validators power and count is only for consensus evidence i.e. duplicate vote
@@ -1905,9 +1892,6 @@ func (cs *State) recordMetrics(height int64, block *types.Block) {
 	cs.metrics.ByzantineValidators.Set(float64(byzantineValidatorsCount))
 	cs.metrics.ByzantineValidatorsPower.Set(float64(byzantineValidatorsPower))
 
-	cs.metricsThreshold.metricsCache.byzantineValidatorsCount = byzantineValidatorsCount
-	cs.metricsThreshold.metricsCache.byzantineValidatorsPower = byzantineValidatorsPower
-
 	if height > 1 {
 		lastBlockMeta := cs.blockStore.LoadBlockMeta(height - 1)
 		if lastBlockMeta != nil {
@@ -1924,7 +1908,6 @@ func (cs *State) recordMetrics(height int64, block *types.Block) {
 	cs.metrics.CommittedHeight.Set(float64(block.Height))
 
 	cs.metricsThreshold.metricsCache.numTxs = len(block.Data.Txs)
-	cs.metricsThreshold.metricsCache.totalTxs = len(block.Data.Txs)
 	cs.metricsThreshold.metricsCache.blockSizeBytes = block.Size()
 }
 
@@ -2192,10 +2175,6 @@ func (cs *State) addVote(vote *types.Vote, peerID p2p.ID) (added bool, err error
 		vals := cs.state.Validators
 		_, val := vals.GetByIndex(vote.ValidatorIndex)
 		cs.metrics.MarkVoteReceived(vote.Type, val.VotingPower, vals.TotalVotingPower())
-
-		n := strings.ToLower(strings.TrimPrefix(vote.Type.String(), "SIGNED_MSG_TYPE_"))
-		p := float64(val.VotingPower) / float64(vals.TotalVotingPower())
-		cs.metricsThreshold.metricsCache.voteReceived = append(cs.metricsThreshold.metricsCache.voteReceived, cacheVoteReceived{n: n, p: p})
 	}
 
 	if err := cs.eventBus.PublishEventVote(types.EventDataVote{Vote: vote}); err != nil {

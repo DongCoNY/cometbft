@@ -129,8 +129,6 @@ func (conR *Reactor) SwitchToConsensus(state sm.State, skipWAL bool) {
 	conR.Metrics.BlockSyncing.Set(0)
 	conR.Metrics.StateSyncing.Set(0)
 
-	conR.MetricsThreshold.metricsCache.syncing.switchToConsensus = true
-
 	// conR.MetricsThreshold.metricsCache.cacheSyncing = true
 
 	if skipWAL {
