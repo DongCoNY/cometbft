@@ -159,10 +159,10 @@ type MetricsThreshold struct {
 	// Time at the last height update
 	timeOldHeight time.Time
 	// Cache stores old metric values
-	oldMetric MetricsCache
+	metricsCache metricsCache
 }
 
-type MetricsCache struct {
+type metricsCache struct {
 	height                      int64
 	round                       int32
 	numTxs                      int
@@ -197,7 +197,7 @@ type MetricsCache struct {
 }
 
 func (m *MetricsThreshold) handleIfOutTime() {
-	m.oldMetric.blockParts = removeDuplicates(m.oldMetric.blockParts)
+	m.metricsCache.blockParts = removeDuplicates(m.metricsCache.blockParts)
 	// ProposalProcessed
 	m.handleMarkProposalProcessed()
 
@@ -213,20 +213,20 @@ func (m *MetricsThreshold) handleIfOutTime() {
 	// ValidatorLastSignedHeight
 	m.handleMarkValidatorPowerLastSignedMiss()
 
-	m.Validators.Set(float64(m.oldMetric.validatorsSize))
-	m.ValidatorsPower.Set(float64(m.oldMetric.validatorsPower))
+	m.Validators.Set(float64(m.metricsCache.validatorsSize))
+	m.ValidatorsPower.Set(float64(m.metricsCache.validatorsPower))
 
-	m.MissingValidators.Set(float64(m.oldMetric.missingValidators))
-	m.MissingValidatorsPower.Set(float64(m.oldMetric.missingValidatorsPower))
+	m.MissingValidators.Set(float64(m.metricsCache.missingValidators))
+	m.MissingValidatorsPower.Set(float64(m.metricsCache.missingValidatorsPower))
 
-	m.ByzantineValidators.Set(float64(m.oldMetric.byzantineValidatorsCount))
-	m.ByzantineValidatorsPower.Set(float64(m.oldMetric.byzantineValidatorsPower))
+	m.ByzantineValidators.Set(float64(m.metricsCache.byzantineValidatorsCount))
+	m.ByzantineValidatorsPower.Set(float64(m.metricsCache.byzantineValidatorsPower))
 
-	m.NumTxs.Set(float64(m.oldMetric.numTxs))
-	m.TotalTxs.Add(float64(m.oldMetric.totalTxs))
-	m.BlockSizeBytes.Set(float64(m.oldMetric.blockSizeBytes))
-	m.CommittedHeight.Set(float64(m.oldMetric.height))
-	m.BlockIntervalSeconds.Observe(m.oldMetric.blockIntervalSeconds)
+	m.NumTxs.Set(float64(m.metricsCache.numTxs))
+	m.TotalTxs.Add(float64(m.metricsCache.totalTxs))
+	m.BlockSizeBytes.Set(float64(m.metricsCache.blockSizeBytes))
+	m.CommittedHeight.Set(float64(m.metricsCache.height))
+	m.BlockIntervalSeconds.Observe(m.metricsCache.blockIntervalSeconds)
 
 	m.handleBlockParts()
 	m.handleBlockGossipPartsReceived()
@@ -257,7 +257,7 @@ func NopCacheStep() map[string]float64 {
 }
 
 func (m *MetricsThreshold) handleStepDurationSeconds() {
-	for stepName, stepTime := range m.oldMetric.step {
+	for stepName, stepTime := range m.metricsCache.step {
 		m.StepDurationSeconds.With("step", stepName).Observe(stepTime)
 	}
 }
@@ -266,15 +266,15 @@ func (m *MetricsThreshold) MarkStep(s cstypes.RoundStepType) {
 	if !m.stepStart.IsZero() {
 		stepTime := time.Since(m.stepStart).Seconds()
 		stepName := strings.TrimPrefix(s.String(), "RoundStep")
-		m.oldMetric.step[stepName] = stepTime
+		m.metricsCache.step[stepName] = stepTime
 	}
 
 	m.stepStart = time.Now()
 }
 
 func (m *MetricsThreshold) handleRoundOld() {
-	m.Rounds.Set(float64(m.oldMetric.round))
-	roundTime := time.Since(m.oldMetric.st).Seconds()
+	m.Rounds.Set(float64(m.metricsCache.round))
+	roundTime := time.Since(m.metricsCache.st).Seconds()
 	m.RoundDurationSeconds.Observe(roundTime)
 	pvt := cmtproto.PrevoteType
 	pvn := strings.ToLower(strings.TrimPrefix(pvt.String(), "SIGNED_MSG_TYPE_"))
@@ -293,13 +293,13 @@ type cacheLabelVal struct {
 }
 
 func (m *MetricsThreshold) handleMarkValidatorPowerLastSignedMiss() {
-	for _, markLabel := range m.oldMetric.validatorPowerLastSignedMiss {
+	for _, markLabel := range m.metricsCache.validatorPowerLastSignedMiss {
 		if markLabel.markValidatorPower {
 			m.ValidatorPower.With(markLabel.label...).Set(float64(markLabel.votingPower))
 		}
 
 		if markLabel.markValidatorLastSignedHeight {
-			m.ValidatorLastSignedHeight.With(markLabel.label...).Set(float64(m.oldMetric.height))
+			m.ValidatorLastSignedHeight.With(markLabel.label...).Set(float64(m.metricsCache.height))
 		}
 		if markLabel.markValidatorMissedBlocks {
 			m.ValidatorMissedBlocks.With(markLabel.label...).Add(float64(1))
@@ -309,28 +309,28 @@ func (m *MetricsThreshold) handleMarkValidatorPowerLastSignedMiss() {
 }
 
 func (m *MetricsThreshold) handleBlockParts() {
-	for _, id := range m.oldMetric.blockPartsReceived {
+	for _, id := range m.metricsCache.blockPartsReceived {
 		m.BlockParts.With("peer_id", strconv.FormatInt(int64(id), 10)).Add(1)
 	}
 	// release memory
 }
 
 func (m *MetricsThreshold) handleLastVote() {
-	for _, value := range m.oldMetric.lateVote {
+	for _, value := range m.metricsCache.lateVote {
 		m.LateVotes.With("vote_type", value).Add(1)
 	}
-	m.oldMetric.lateVote = []string{}
+	m.metricsCache.lateVote = []string{}
 }
 
 func (m *MetricsThreshold) handleRoundVotingPowerPercent() {
-	for _, old := range m.oldMetric.voteReceived {
+	for _, old := range m.metricsCache.voteReceived {
 		m.RoundVotingPowerPercent.With("vote_type", old.n).Add(old.p)
 	}
 	// release memory
 }
 
 func (m *MetricsThreshold) handleBlockGossipPartsReceived() {
-	if m.oldMetric.notBlockGossipPartsReceived {
+	if m.metricsCache.notBlockGossipPartsReceived {
 		m.BlockGossipPartsReceived.With("matches_current", "false").Add(1)
 	} else {
 		m.BlockGossipPartsReceived.With("matches_current", "true").Add(1)
@@ -339,7 +339,7 @@ func (m *MetricsThreshold) handleBlockGossipPartsReceived() {
 }
 
 func (m *MetricsThreshold) handleQuorumPrevoteDelay() {
-	for _, j := range m.oldMetric.quorumPrevoteDelay {
+	for _, j := range m.metricsCache.quorumPrevoteDelay {
 		m.QuorumPrevoteDelay.With("proposer_address", j.add).Set(j.time)
 	}
 	// release memory
@@ -352,8 +352,8 @@ type cacheFullPrevoteDelay struct {
 }
 
 func (m *MetricsThreshold) handleFullPrevoteDelay() {
-	if m.oldMetric.fullPrevoteDelay.isHasAll {
-		m.FullPrevoteDelay.With("proposer_address", m.oldMetric.fullPrevoteDelay.address).Set(m.oldMetric.fullPrevoteDelay.time)
+	if m.metricsCache.fullPrevoteDelay.isHasAll {
+		m.FullPrevoteDelay.With("proposer_address", m.metricsCache.fullPrevoteDelay.address).Set(m.metricsCache.fullPrevoteDelay.time)
 	}
 }
 
@@ -363,14 +363,14 @@ type cacheProposalCreateCount struct {
 }
 
 func (m *MetricsThreshold) handleProposalCreateCount() {
-	if m.oldMetric.proposalCreateCount.noValidBlocks {
-		m.ProposalCreateCount.Add(float64(m.oldMetric.proposalCreateCount.count))
+	if m.metricsCache.proposalCreateCount.noValidBlocks {
+		m.ProposalCreateCount.Add(float64(m.metricsCache.proposalCreateCount.count))
 	}
 }
 
 func (m *MetricsThreshold) handleMarkProposalProcessed() {
 	status := "accepted"
-	if !m.oldMetric.proposalProcessed {
+	if !m.metricsCache.proposalProcessed {
 		status = "rejected"
 	}
 	m.ProposalReceiveCount.With("status", status).Add(1)
@@ -394,33 +394,33 @@ type cacheSyncing struct {
 }
 
 func (m *MetricsThreshold) MarkStateSync() {
-	m.oldMetric.syncing.stateSync = true
+	m.metricsCache.syncing.stateSync = true
 }
 
 func (m *MetricsThreshold) MarkStateSync2() {
-	m.oldMetric.syncing.stateSync2 = true
+	m.metricsCache.syncing.stateSync2 = true
 }
 
 func (m *MetricsThreshold) MarkBlockSync() {
-	m.oldMetric.syncing.blockSync = true
+	m.metricsCache.syncing.blockSync = true
 }
 
 func (m *MetricsThreshold) handleSyncing() {
-	if m.oldMetric.syncing.switchToConsensus {
+	if m.metricsCache.syncing.switchToConsensus {
 		m.BlockSyncing.Set(0)
 		m.StateSyncing.Set(0)
 	}
 
-	if m.oldMetric.syncing.blockSync {
+	if m.metricsCache.syncing.blockSync {
 		m.StateSyncing.Set(0)
 		m.BlockSyncing.Set(1)
 	}
 
-	if m.oldMetric.syncing.stateSync {
+	if m.metricsCache.syncing.stateSync {
 		m.StateSyncing.Set(1)
 	}
 
-	if m.oldMetric.syncing.stateSync2 {
+	if m.metricsCache.syncing.stateSync2 {
 		m.BlockSyncing.Set(1)
 	}
 }
@@ -436,7 +436,7 @@ func (m *MetricsThreshold) handCSVTimeSet() error {
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
 
-	err = writer.Write(m.oldMetric.StringForEachStep())
+	err = writer.Write(m.metricsCache.StringForEachStep())
 	if err != nil {
 		return err
 	}
@@ -453,7 +453,7 @@ func (m MetricsThreshold) handleWriteToFileCSVForEachHeight() error {
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
 
-	err = writer.Write(m.oldMetric.StringForEachHeight())
+	err = writer.Write(m.metricsCache.StringForEachHeight())
 	if err != nil {
 		return err
 	}
@@ -470,7 +470,7 @@ func (m MetricsThreshold) handleWriteToFileCSVForVoteStep() error {
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
 
-	err = writer.Write(m.oldMetric.StringForVotingPrecommitStep())
+	err = writer.Write(m.metricsCache.StringForVotingPrecommitStep())
 	if err != nil {
 		return err
 	}
@@ -487,14 +487,14 @@ func (m MetricsThreshold) handleWriteToFileCSVForProposalStep() error {
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
 
-	err = writer.Write(m.oldMetric.StringForProposalStep())
+	err = writer.Write(m.metricsCache.StringForProposalStep())
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (m MetricsCache) StringForEachHeight() []string {
+func (m metricsCache) StringForEachHeight() []string {
 	forheight := []string{}
 	// Height,
 	forheight = append(forheight, strconv.FormatInt(m.height, 10))
@@ -541,7 +541,7 @@ func (m MetricsCache) StringForEachHeight() []string {
 	return forheight
 }
 
-func (m MetricsCache) StringForEachStep() []string {
+func (m metricsCache) StringForEachStep() []string {
 	forStep := []string{strconv.FormatInt(m.height, 10)}
 
 	for _, timeStep := range m.step {
@@ -550,7 +550,7 @@ func (m MetricsCache) StringForEachStep() []string {
 	return forStep
 }
 
-func (m MetricsCache) StringForVotingPrecommitStep() []string {
+func (m metricsCache) StringForVotingPrecommitStep() []string {
 	forheight := []string{}
 
 	forheight = append(forheight, strconv.FormatInt(m.height, 10))
@@ -563,7 +563,7 @@ func (m MetricsCache) StringForVotingPrecommitStep() []string {
 	return forheight
 }
 
-func (m MetricsCache) StringForProposalStep() []string {
+func (m metricsCache) StringForProposalStep() []string {
 	forheight := []string{}
 
 	forheight = append(forheight, strconv.FormatInt(m.height, 10))
