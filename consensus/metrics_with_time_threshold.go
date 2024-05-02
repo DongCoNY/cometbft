@@ -53,6 +53,11 @@ func init() {
 		pathblockOnlyTimeStep = metricspath + "/blockOnlyTimeStep.csv"
 		file4, _ := os.Create(pathblockOnlyTimeStep)
 		defer file4.Close()
+	} else {
+		pathblockProposalStep = metricspath + "/blockProposalStep.csv"
+		pathblockVoteStep = metricspath + "/blockVoteStep.csv"
+		pathblock = metricspath + "/block.csv"
+		pathblockOnlyTimeStep = metricspath + "/blockOnlyTimeStep.csv"
 	}
 }
 
@@ -170,7 +175,7 @@ type metricsCache struct {
 	blockIntervalSeconds        float64
 	proposalProcessed           bool
 	blockPartsReceived          []uint32
-	notBlockGossipPartsReceived bool
+	notBlockGossipPartsReceived []bool
 	quorumPrevoteDelay          []caheOldQuorumPrevoteDelay
 	fullPrevoteDelay            cacheFullPrevoteDelay
 	lateVote                    []string
@@ -330,10 +335,12 @@ func (m *MetricsThreshold) handleRoundVotingPowerPercent() {
 }
 
 func (m *MetricsThreshold) handleBlockGossipPartsReceived() {
-	if m.metricsCache.notBlockGossipPartsReceived {
-		m.BlockGossipPartsReceived.With("matches_current", "false").Add(1)
-	} else {
-		m.BlockGossipPartsReceived.With("matches_current", "true").Add(1)
+	for _, j := range m.metricsCache.notBlockGossipPartsReceived {
+		if j {
+			m.BlockGossipPartsReceived.With("matches_current", "false").Add(1)
+		} else {
+			m.BlockGossipPartsReceived.With("matches_current", "true").Add(1)
+		}
 	}
 
 }
@@ -514,10 +521,12 @@ func (m metricsCache) StringForEachHeight() []string {
 	}
 
 	// BlockGossipPartsReceived
-	if m.notBlockGossipPartsReceived {
-		forheight = append(forheight, "false")
-	} else {
-		forheight = append(forheight, "true")
+	for _, j := range m.notBlockGossipPartsReceived {
+		if j {
+			forheight = append(forheight, "false")
+		} else {
+			forheight = append(forheight, "true")
+		}
 	}
 	// QuorumPrevoteDelay,
 	forheight = append(forheight, strconv.Itoa(len(m.quorumPrevoteDelay)))

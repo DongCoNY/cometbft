@@ -538,6 +538,7 @@ func (cs *State) updateHeight(height int64) {
 	cs.metricsThreshold.metricsCache.syncing.blockSync = false
 	cs.metricsThreshold.metricsCache.syncing.stateSync = false
 	cs.metricsThreshold.metricsCache.syncing.stateSync2 = false
+	cs.metricsThreshold.metricsCache.notBlockGossipPartsReceived = []bool{}
 
 	cs.metricsThreshold.metricsCache.step = NopCacheStep()
 	cs.metricsThreshold.metricsCache.proposalCreateCount.noValidBlocks = false
@@ -1975,18 +1976,17 @@ func (cs *State) addProposalBlockPart(msg *BlockPartMessage, peerID p2p.ID) (add
 	height, round, part := msg.Height, msg.Round, msg.Part
 
 	// Blocks might be reused, so round mismatch is OK
-	cs.metricsThreshold.metricsCache.notBlockGossipPartsReceived = false
 	if cs.Height != height {
 		cs.Logger.Debug("received block part from wrong height", "height", height, "round", round)
 		cs.metrics.BlockGossipPartsReceived.With("matches_current", "false").Add(1)
-		cs.metricsThreshold.metricsCache.notBlockGossipPartsReceived = true
+		cs.metricsThreshold.metricsCache.notBlockGossipPartsReceived = append(cs.metricsThreshold.metricsCache.notBlockGossipPartsReceived, true)
 		return false, nil
 	}
 
 	// We're not expecting a block part.
 	if cs.ProposalBlockParts == nil {
 		cs.metrics.BlockGossipPartsReceived.With("matches_current", "false").Add(1)
-		cs.metricsThreshold.metricsCache.notBlockGossipPartsReceived = true
+		cs.metricsThreshold.metricsCache.notBlockGossipPartsReceived = append(cs.metricsThreshold.metricsCache.notBlockGossipPartsReceived, true)
 		// NOTE: this can happen when we've gone to a higher round and
 		// then receive parts from the previous round - not necessarily a bad peer.
 		cs.Logger.Debug(
@@ -2003,12 +2003,13 @@ func (cs *State) addProposalBlockPart(msg *BlockPartMessage, peerID p2p.ID) (add
 	if err != nil {
 		if errors.Is(err, types.ErrPartSetInvalidProof) || errors.Is(err, types.ErrPartSetUnexpectedIndex) {
 			cs.metrics.BlockGossipPartsReceived.With("matches_current", "false").Add(1)
-			cs.metricsThreshold.metricsCache.notBlockGossipPartsReceived = true
+			cs.metricsThreshold.metricsCache.notBlockGossipPartsReceived = append(cs.metricsThreshold.metricsCache.notBlockGossipPartsReceived, true)
 		}
 		return added, err
 	}
 
 	cs.metrics.BlockGossipPartsReceived.With("matches_current", "true").Add(1)
+	cs.metricsThreshold.metricsCache.notBlockGossipPartsReceived = append(cs.metricsThreshold.metricsCache.notBlockGossipPartsReceived, false)
 
 	if cs.ProposalBlockParts.ByteSize() > cs.state.ConsensusParams.Block.MaxBytes {
 		return added, fmt.Errorf("total size of proposal block parts exceeds maximum block bytes (%d > %d)",
