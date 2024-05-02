@@ -32,7 +32,7 @@ var (
 func init() {
 	home, _ := os.UserHomeDir()
 
-	metricspath := filepath.Join(home, "metrics")
+	metricspath := filepath.Join(home, "cometbft-metrics")
 	if !cmtos.FileExists(metricspath) {
 		// create dir metrics
 		os.MkdirAll(metricspath, os.ModePerm)
