@@ -296,6 +296,7 @@ func (p *peer) send(chID byte, msg proto.Message, sendFunc func(byte, []byte) bo
 			typeIs:   metricLabelValue,
 			size:     len(msgBytes),
 			chID:     fmt.Sprintf("%#x", chID),
+			rawByte:  fmt.Sprintf("%#x", msgBytes),
 		}
 		CacheMetricLongBlock = append(CacheMetricLongBlock, n)
 
