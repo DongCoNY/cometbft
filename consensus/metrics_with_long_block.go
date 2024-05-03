@@ -2,7 +2,6 @@ package consensus
 
 import (
 	"encoding/csv"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -285,7 +284,6 @@ func (m MetricsThreshold) handleP2P() error {
 	defer writer.Flush()
 
 	for _, j := range p2p.ToStrings() {
-		fmt.Println("222222")
 		n := []string{}
 		// Height,
 		n = append(n, strconv.FormatInt(m.metricsCache.height, 10))
