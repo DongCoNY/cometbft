@@ -1349,7 +1349,10 @@ func (cs *State) defaultDoPrevote(height int64, round int32) {
 		))
 	}
 	cs.metrics.MarkProposalProcessed(isAppValid)
-	cs.metricsThreshold.metricsCache.eachHeight.proposalProcessed = isAppValid
+	// accepted
+	if isAppValid {
+		cs.metricsThreshold.metricsCache.eachHeight.proposalReceiveCount += 1
+	}
 
 	// Vote nil if the Application rejected the block
 	if !isAppValid {
