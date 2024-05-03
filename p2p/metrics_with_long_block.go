@@ -8,6 +8,10 @@ var (
 	CacheMetricLongBlock []cacheMetricsMsg
 )
 
+func init() {
+	CacheMetricLongBlock = []cacheMetricsMsg{}
+}
+
 type cacheMetricsMsg struct {
 	fromPeer string
 	toPeer   string
