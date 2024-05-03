@@ -143,6 +143,20 @@ func NopCacheMetricsCache() metricsCache {
 	}
 }
 
+func (m MetricsThreshold) ResetCache() {
+	m.metricsCache.notBlockGossipPartsReceived = []bool{}
+	m.metricsCache.quorumPrevoteDelay = []caheOldQuorumPrevoteDelay{}
+	m.metricsCache.lateVote = []string{}
+	m.metricsCache.blockParts = []uint32{}
+	m.metricsCache.blockPartsReceived = []uint32{}
+	m.metricsCache.steps = NopCacheStep()
+
+	m.metricsCache.proposalCreateCount = cacheProposalCreateCount{
+		noValidBlocks: false,
+		count:         0,
+	}
+}
+
 func NopCacheStep() map[string]float64 {
 	step := make(map[string]float64, 0)
 	step["NewHeight"] = 0

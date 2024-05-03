@@ -530,14 +530,9 @@ func (cs *State) updateHeight(height int64) {
 	}
 	// resets cache
 	p2p.ResetCacheMetrics()
-	cs.metricsThreshold.metricsCache.notBlockGossipPartsReceived = []bool{}
-
-	cs.metricsThreshold.metricsCache.steps = NopCacheStep()
-	cs.metricsThreshold.metricsCache.proposalCreateCount.noValidBlocks = false
-	cs.metricsThreshold.metricsCache.proposalCreateCount.count = 0
-	cs.metricsThreshold.metricsCache.height = height
+	cs.metricsThreshold.ResetCache()
 	cs.metricsThreshold.timeOldHeight = time.Now()
-
+	cs.metricsThreshold.metricsCache.height = height
 }
 
 func (cs *State) updateRoundStep(round int32, step cstypes.RoundStepType) {
