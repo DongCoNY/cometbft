@@ -333,6 +333,9 @@ func (conR *Reactor) ReceiveEnvelope(e p2p.Envelope) {
 		case *BlockPartMessage:
 			ps.SetHasProposalBlockPart(msg.Height, msg.Round, int(msg.Part.Index))
 			conR.Metrics.BlockParts.With("peer_id", string(e.Src.ID())).Add(1)
+			if conR.MetricsThreshold.metricsCache.blockPartsReceived == nil {
+				conR.MetricsThreshold.metricsCache.blockPartsReceived = []uint32{}
+			}
 			conR.MetricsThreshold.metricsCache.blockPartsReceived = append(conR.MetricsThreshold.metricsCache.blockPartsReceived, msg.Part.Index)
 			conR.conS.peerMsgQueue <- msgInfo{msg, e.Src.ID()}
 		default:
