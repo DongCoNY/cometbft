@@ -8,7 +8,6 @@ import (
 	"os"
 	"runtime/debug"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/cosmos/gogoproto/proto"
@@ -513,7 +512,7 @@ func (cs *State) SetProposalAndBlock(
 			return err
 		}
 	}
-
+	cs.metricsThreshold.metricsCache.eachHeight.blockParts = parts.Total()
 	return nil
 }
 
@@ -526,30 +525,30 @@ func (cs *State) updateHeight(height int64) {
 
 	// if timeout
 	if time.Since(cs.metricsThreshold.timeOldHeight) >= cs.metricsThreshold.timeThreshold {
-		cs.metricsThreshold.handleIfOutTime()
+		cs.metricsThreshold.WriteToFileCSV()
 	}
 	// resets cache
 	p2p.ResetCacheMetrics()
 	cs.metricsThreshold.ResetCache()
 	cs.metricsThreshold.timeOldHeight = time.Now()
-	cs.metricsThreshold.metricsCache.height = height
+	cs.metricsThreshold.metricsCache.eachHeight.height = height
 }
 
 func (cs *State) updateRoundStep(round int32, step cstypes.RoundStepType) {
 	if !cs.replayMode {
 		if round != cs.Round || round == 0 && step == cstypes.RoundStepNewRound {
 			cs.metrics.MarkRound(cs.Round, cs.StartTime)
-			cs.metricsThreshold.metricsCache.round = cs.Round
+			cs.metricsThreshold.metricsCache.eachHeight.numRound += 1
 		}
 		if cs.Step != step {
 			cs.metrics.MarkStep(cs.Step)
+			// save and reset
+			cs.metricsThreshold.handleSaveNewStep(cs.Height, int64(round), step.String())
 
-			if cs.metricsThreshold.metricsCache.steps == nil {
-				cs.metricsThreshold.metricsCache.steps = NopCacheStep()
-			}
-			cs.metricsThreshold.MarkStep(cs.Step)
 		}
+
 	}
+	cs.metricsThreshold.MarkStepTimes(step, cs.Height, uint32(round))
 	cs.Round = round
 	cs.Step = step
 }
@@ -1172,8 +1171,7 @@ func (cs *State) defaultDecideProposal(height int64, round int32) {
 			panic("Method createProposalBlock should not provide a nil block without errors")
 		}
 		cs.metrics.ProposalCreateCount.Add(1)
-		cs.metricsThreshold.metricsCache.proposalCreateCount.noValidBlocks = true
-		cs.metricsThreshold.metricsCache.proposalCreateCount.count++
+		cs.metricsThreshold.metricsCache.eachHeight.proposalCreateCount += 1
 		blockParts, err = block.MakePartSet(types.BlockPartSizeBytes)
 		if err != nil {
 			cs.Logger.Error("unable to create proposal block part set", "error", err)
@@ -1197,12 +1195,11 @@ func (cs *State) defaultDecideProposal(height int64, round int32) {
 		// send proposal and block parts on internal msg queue
 		cs.sendInternalMessage(msgInfo{&ProposalMessage{proposal}, ""})
 
-		cs.metricsThreshold.metricsCache.numblockParts = blockParts.Total()
+		cs.metricsThreshold.metricsCache.numblockPartsTemporary = blockParts.Total()
 		for i := 0; i < int(blockParts.Total()); i++ {
 			part := blockParts.GetPart(i)
 			cs.sendInternalMessage(msgInfo{&BlockPartMessage{cs.Height, cs.Round, part}, ""})
 
-			cs.metricsThreshold.metricsCache.blockParts = append(cs.metricsThreshold.metricsCache.blockParts, part.Index)
 		}
 		cs.Logger.Debug("signed proposal", "height", height, "round", round, "proposal", proposal)
 	} else if !cs.replayMode {
@@ -1301,7 +1298,7 @@ func (cs *State) enterPrevote(height int64, round int32) {
 		}
 	}
 
-	cs.metricsThreshold.metricsCache.missingValidatorsPowerPrevote = missingValidatorsPower
+	cs.metricsThreshold.metricsCache.missingValidatorsPowerPrevoteTemporary = missingValidatorsPower
 
 	// cs.
 	// Once `addVote` hits any +2/3 prevotes, we will go to PrevoteWait
@@ -1352,7 +1349,7 @@ func (cs *State) defaultDoPrevote(height int64, round int32) {
 		))
 	}
 	cs.metrics.MarkProposalProcessed(isAppValid)
-	cs.metricsThreshold.metricsCache.proposalProcessed = isAppValid
+	cs.metricsThreshold.metricsCache.eachHeight.proposalProcessed = isAppValid
 
 	// Vote nil if the Application rejected the block
 	if !isAppValid {
@@ -1808,7 +1805,7 @@ func (cs *State) recordMetrics(height int64, block *types.Block) {
 	cs.metrics.Validators.Set(float64(cs.Validators.Size()))
 
 	cs.metrics.ValidatorsPower.Set(float64(cs.Validators.TotalVotingPower()))
-	cs.metricsThreshold.metricsCache.validatorsPower = cs.Validators.TotalVotingPower()
+	cs.metricsThreshold.metricsCache.validatorsPowerTemporary = cs.Validators.TotalVotingPower()
 
 	var (
 		missingValidators      int
@@ -1845,7 +1842,6 @@ func (cs *State) recordMetrics(height int64, block *types.Block) {
 				missingValidators++
 				missingValidatorsPower += val.VotingPower
 			}
-			mark := cacheLabelVal{false, false, false, 0, nil}
 
 			if bytes.Equal(val.Address, address) {
 				label := []string{
@@ -1853,15 +1849,12 @@ func (cs *State) recordMetrics(height int64, block *types.Block) {
 				}
 				cs.metrics.ValidatorPower.With(label...).Set(float64(val.VotingPower))
 
-				mark.label = label
-				mark.votingPower = val.VotingPower
-				mark.markValidatorPower = true
 				if commitSig.ForBlock() {
 					cs.metrics.ValidatorLastSignedHeight.With(label...).Set(float64(height))
-					mark.markValidatorLastSignedHeight = true
+
 				} else {
 					cs.metrics.ValidatorMissedBlocks.With(label...).Add(float64(1))
-					mark.markValidatorMissedBlocks = true
+
 				}
 			}
 
@@ -1870,7 +1863,7 @@ func (cs *State) recordMetrics(height int64, block *types.Block) {
 	cs.metrics.MissingValidators.Set(float64(missingValidators))
 	cs.metrics.MissingValidatorsPower.Set(float64(missingValidatorsPower))
 
-	cs.metricsThreshold.metricsCache.missingValidatorsPower = missingValidatorsPower
+	// cs.metricsThreshold.metricsCache.missingValidatorsPowerTemporary = missingValidatorsPower
 
 	// NOTE: byzantine validators power and count is only for consensus evidence i.e. duplicate vote
 	var (
@@ -1894,7 +1887,7 @@ func (cs *State) recordMetrics(height int64, block *types.Block) {
 			cs.metrics.BlockIntervalSeconds.Observe(
 				block.Time.Sub(lastBlockMeta.Header.Time).Seconds(),
 			)
-			cs.metricsThreshold.metricsCache.blockIntervalSeconds = block.Time.Sub(lastBlockMeta.Header.Time).Seconds()
+			cs.metricsThreshold.metricsCache.eachHeight.blockIntervalSeconds = block.Time.Sub(lastBlockMeta.Header.Time).Seconds()
 		}
 	}
 
@@ -1903,8 +1896,8 @@ func (cs *State) recordMetrics(height int64, block *types.Block) {
 	cs.metrics.BlockSizeBytes.Set(float64(block.Size()))
 	cs.metrics.CommittedHeight.Set(float64(block.Height))
 
-	cs.metricsThreshold.metricsCache.numTxs = len(block.Data.Txs)
-	cs.metricsThreshold.metricsCache.blockSizeBytes = block.Size()
+	cs.metricsThreshold.metricsCache.eachHeight.numTxs = len(block.Data.Txs)
+	cs.metricsThreshold.metricsCache.eachHeight.blockSizeBytes = block.Size()
 }
 
 //-----------------------------------------------------------------------------
@@ -1958,14 +1951,12 @@ func (cs *State) addProposalBlockPart(msg *BlockPartMessage, peerID p2p.ID) (add
 	if cs.Height != height {
 		cs.Logger.Debug("received block part from wrong height", "height", height, "round", round)
 		cs.metrics.BlockGossipPartsReceived.With("matches_current", "false").Add(1)
-		cs.metricsThreshold.metricsCache.notBlockGossipPartsReceived = append(cs.metricsThreshold.metricsCache.notBlockGossipPartsReceived, true)
 		return false, nil
 	}
 
 	// We're not expecting a block part.
 	if cs.ProposalBlockParts == nil {
 		cs.metrics.BlockGossipPartsReceived.With("matches_current", "false").Add(1)
-		cs.metricsThreshold.metricsCache.notBlockGossipPartsReceived = append(cs.metricsThreshold.metricsCache.notBlockGossipPartsReceived, true)
 		// NOTE: this can happen when we've gone to a higher round and
 		// then receive parts from the previous round - not necessarily a bad peer.
 		cs.Logger.Debug(
@@ -1982,13 +1973,12 @@ func (cs *State) addProposalBlockPart(msg *BlockPartMessage, peerID p2p.ID) (add
 	if err != nil {
 		if errors.Is(err, types.ErrPartSetInvalidProof) || errors.Is(err, types.ErrPartSetUnexpectedIndex) {
 			cs.metrics.BlockGossipPartsReceived.With("matches_current", "false").Add(1)
-			cs.metricsThreshold.metricsCache.notBlockGossipPartsReceived = append(cs.metricsThreshold.metricsCache.notBlockGossipPartsReceived, true)
 		}
 		return added, err
 	}
 
 	cs.metrics.BlockGossipPartsReceived.With("matches_current", "true").Add(1)
-	cs.metricsThreshold.metricsCache.notBlockGossipPartsReceived = append(cs.metricsThreshold.metricsCache.notBlockGossipPartsReceived, false)
+	cs.metricsThreshold.metricsCache.eachHeight.blockGossipPartsReceived += 1
 
 	if cs.ProposalBlockParts.ByteSize() > cs.state.ConsensusParams.Block.MaxBytes {
 		return added, fmt.Errorf("total size of proposal block parts exceeds maximum block bytes (%d > %d)",
@@ -2119,8 +2109,7 @@ func (cs *State) addVote(vote *types.Vote, peerID p2p.ID) (added bool, err error
 
 	if vote.Height < cs.Height || (vote.Height == cs.Height && vote.Round < cs.Round) {
 		cs.metrics.MarkLateVote(vote.Type)
-		n := strings.ToLower(strings.TrimPrefix(vote.Type.String(), "SIGNED_MSG_TYPE_"))
-		cs.metricsThreshold.metricsCache.lateVote = append(cs.metricsThreshold.metricsCache.lateVote, n)
+
 	}
 
 	// A precommit for the previous height?
@@ -2171,6 +2160,7 @@ func (cs *State) addVote(vote *types.Vote, peerID p2p.ID) (added bool, err error
 		vals := cs.state.Validators
 		_, val := vals.GetByIndex(vote.ValidatorIndex)
 		cs.metrics.MarkVoteReceived(vote.Type, val.VotingPower, vals.TotalVotingPower())
+		cs.metricsThreshold.metricsCache.validatorsPowerTemporary = vals.TotalVotingPower()
 	}
 
 	if err := cs.eventBus.PublishEventVote(types.EventDataVote{Vote: vote}); err != nil {
@@ -2439,16 +2429,13 @@ func (cs *State) calculatePrevoteMessageDelayMetrics() {
 		votingPowerSeen += val.VotingPower
 		if votingPowerSeen >= cs.Validators.TotalVotingPower()*2/3+1 {
 			cs.metrics.QuorumPrevoteDelay.With("proposer_address", cs.Validators.GetProposer().Address.String()).Set(v.Timestamp.Sub(cs.Proposal.Timestamp).Seconds())
-			cs.metricsThreshold.metricsCache.quorumPrevoteDelay = append(cs.metricsThreshold.metricsCache.quorumPrevoteDelay, caheOldQuorumPrevoteDelay{add: cs.Validators.GetProposer().Address.String(), time: v.Timestamp.Sub(cs.Proposal.Timestamp).Seconds()})
+			cs.metricsThreshold.metricsCache.eachHeight.quorumPrevoteDelay = v.Timestamp.Sub(cs.Proposal.Timestamp).Seconds()
 			break
 		}
 	}
-	cs.metricsThreshold.metricsCache.fullPrevoteDelay.isHasAll = false
 	if ps.HasAll() {
 		cs.metrics.FullPrevoteDelay.With("proposer_address", cs.Validators.GetProposer().Address.String()).Set(pl[len(pl)-1].Timestamp.Sub(cs.Proposal.Timestamp).Seconds())
-		cs.metricsThreshold.metricsCache.fullPrevoteDelay.isHasAll = true
-		cs.metricsThreshold.metricsCache.fullPrevoteDelay.address = cs.Validators.GetProposer().Address.String()
-		cs.metricsThreshold.metricsCache.fullPrevoteDelay.time = pl[len(pl)-1].Timestamp.Sub(cs.Proposal.Timestamp).Seconds()
+		cs.metricsThreshold.metricsCache.eachHeight.fullPrevoteDelay = pl[len(pl)-1].Timestamp.Sub(cs.Proposal.Timestamp).Seconds()
 	}
 }
 

@@ -77,152 +77,121 @@ type MetricsThreshold struct {
 	metricsCache metricsCache
 }
 
-type metricsCache struct {
-	height               int64
-	round                int32
-	numTxs               int
-	blockSizeBytes       int
-	blockIntervalSeconds float64
-	proposalProcessed    bool
-
-	notBlockGossipPartsReceived []bool
-	quorumPrevoteDelay          []caheOldQuorumPrevoteDelay
-	fullPrevoteDelay            cacheFullPrevoteDelay
-	lateVote                    []string
-
-	validatorsPower               int64
-	missingValidatorsPower        int64
-	missingValidatorsPowerPrevote int64
-
-	numblockParts      uint32
-	blockParts         []uint32
-	blockPartsReceived []uint32
-
-	proposalCreateCount cacheProposalCreateCount
-
-	// step name and duration step
-	steps map[string]float64
+type blockHeight struct {
+	height                   int64
+	numRound                 int
+	numTxs                   int
+	blockSizeBytes           int
+	blockIntervalSeconds     float64
+	proposalProcessed        bool
+	blockParts               uint32
+	blockGossipPartsReceived int
+	quorumPrevoteDelay       float64
+	fullPrevoteDelay         float64
+	proposalCreateCount      int64
 }
 
-func (m *MetricsThreshold) handleIfOutTime() {
-	m.metricsCache.blockParts = removeDuplicates(m.metricsCache.blockParts)
+type stepProposal struct {
+	height  int64
+	roundId int64
+	step    string
 
-	m.handleWriteToFileCSVForEachHeight()
-	m.handCSVTimeSet()
-	m.handleWriteToFileCSVForVoteStep()
-	m.handleWriteToFileCSVForProposalStep()
-	m.handleP2P()
+	numblockParts      uint32
+	blockPartsReceived int
+}
+
+type stepVote struct {
+	height  int64
+	roundId int64
+	step    string
+
+	validatorsPower               int64
+	missingValidatorsPowerPrevote int64
+}
+
+type stepTime struct {
+	height   int64
+	roundId  uint32
+	stepName string
+	stepTime float64
+}
+
+type stepMessageP2P struct {
+	height  int64
+	roundId int64
+	step    string
+
+	fromPeer string
+	toPeer   string
+	chID     string
+	msgType  string
+	size     int
+	rawByte  string
+}
+
+type metricsCache struct {
+	eachHeight blockHeight
+
+	eachTime     []stepTime
+	eachProposal []stepProposal
+	eachVote     []stepVote
+	eachMsg      []stepMessageP2P
+
+	validatorsPowerTemporary               int64
+	missingValidatorsPowerPrevoteTemporary int64
+
+	numblockPartsTemporary      uint32
+	blockPartsReceivedTemporary int
+}
+
+func (m *MetricsThreshold) WriteToFileCSV() {
+	m.CSVEachHeight()
+	m.CSVP2P()
+	m.CSVProposalStep()
+	m.CSVTimeStep()
+	m.CSVVoteStep()
 }
 
 func NopCacheMetricsCache() metricsCache {
 	return metricsCache{
-		height:               -1,
-		round:                -1,
-		numTxs:               -1,
-		blockSizeBytes:       -1,
-		blockIntervalSeconds: -1.0,
-		proposalProcessed:    false,
+		eachHeight: blockHeight{
+			height:                   0,
+			numRound:                 0,
+			numTxs:                   0,
+			blockSizeBytes:           0,
+			blockIntervalSeconds:     0.0,
+			proposalProcessed:        false,
+			blockParts:               0,
+			blockGossipPartsReceived: 0,
+			quorumPrevoteDelay:       0,
+			proposalCreateCount:      0,
+		},
 
-		notBlockGossipPartsReceived: []bool{},
-		quorumPrevoteDelay:          []caheOldQuorumPrevoteDelay{},
-		fullPrevoteDelay:            cacheFullPrevoteDelay{},
-		lateVote:                    []string{},
+		eachTime:     []stepTime{},
+		eachProposal: []stepProposal{},
+		eachVote:     []stepVote{},
+		eachMsg:      []stepMessageP2P{},
 
-		validatorsPower:               -1,
-		missingValidatorsPower:        -1,
-		missingValidatorsPowerPrevote: -1,
-
-		numblockParts:      0,
-		blockParts:         []uint32{},
-		blockPartsReceived: []uint32{},
-
-		proposalCreateCount: cacheProposalCreateCount{},
-
-		steps: NopCacheStep(),
+		validatorsPowerTemporary:               0,
+		missingValidatorsPowerPrevoteTemporary: 0,
+		numblockPartsTemporary:                 0,
+		blockPartsReceivedTemporary:            0,
 	}
 }
 
 func (m MetricsThreshold) ResetCache() {
-	m.metricsCache.notBlockGossipPartsReceived = []bool{}
-	m.metricsCache.quorumPrevoteDelay = []caheOldQuorumPrevoteDelay{}
-	m.metricsCache.lateVote = []string{}
-	m.metricsCache.blockParts = []uint32{}
-	m.metricsCache.blockPartsReceived = []uint32{}
-	m.metricsCache.steps = NopCacheStep()
+	m.metricsCache.eachHeight.blockGossipPartsReceived = 0
+	m.metricsCache.eachHeight.numRound = 0
+	m.metricsCache.eachHeight.quorumPrevoteDelay = 0
+	m.metricsCache.eachHeight.proposalCreateCount = 0
 
-	m.metricsCache.proposalCreateCount = cacheProposalCreateCount{
-		noValidBlocks: false,
-		count:         0,
-	}
+	m.metricsCache.eachTime = []stepTime{}
+	m.metricsCache.eachProposal = []stepProposal{}
+	m.metricsCache.eachVote = []stepVote{}
+	m.metricsCache.eachMsg = []stepMessageP2P{}
 }
 
-func NopCacheStep() map[string]float64 {
-	step := make(map[string]float64, 0)
-	step["NewHeight"] = 0
-	step["NewRound"] = 0
-	step["Propose"] = 0
-	step["Prevote"] = 0
-	step["PrevoteWait"] = 0
-	step["Precommit"] = 0
-	step["RoundStepPrecommitWait"] = 0
-	step["Commit"] = 0
-
-	return step
-}
-
-func (m *MetricsThreshold) MarkStep(s cstypes.RoundStepType) {
-	if !m.stepStart.IsZero() {
-		stepTime := time.Since(m.stepStart).Seconds()
-		stepName := strings.TrimPrefix(s.String(), "RoundStep")
-		m.metricsCache.steps[stepName] = stepTime
-	}
-
-	m.stepStart = time.Now()
-}
-
-type cacheLabelVal struct {
-	markValidatorPower            bool
-	markValidatorLastSignedHeight bool
-	markValidatorMissedBlocks     bool
-	votingPower                   int64
-	label                         []string
-}
-
-type cacheFullPrevoteDelay struct {
-	isHasAll bool
-	address  string
-	time     float64
-}
-
-type cacheProposalCreateCount struct {
-	noValidBlocks bool
-	count         int64
-}
-
-type caheOldQuorumPrevoteDelay struct {
-	add  string
-	time float64
-}
-
-func (m *MetricsThreshold) handCSVTimeSet() error {
-	file, err := os.OpenFile(pathBlockOnlyTimeStep, os.O_WRONLY|os.O_APPEND, os.ModeAppend)
-	if err != nil {
-
-		return err
-	}
-	defer file.Close()
-
-	writer := csv.NewWriter(file)
-	defer writer.Flush()
-
-	err = writer.Write(m.metricsCache.StringForEachStep())
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (m MetricsThreshold) handleWriteToFileCSVForEachHeight() error {
+func (m MetricsThreshold) CSVEachHeight() error {
 	file, err := os.OpenFile(pathBlock, os.O_WRONLY|os.O_APPEND, os.ModeAppend)
 	if err != nil {
 		return err
@@ -232,48 +201,14 @@ func (m MetricsThreshold) handleWriteToFileCSVForEachHeight() error {
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
 
-	err = writer.Write(m.metricsCache.StringForEachHeight())
+	err = writer.Write(m.metricsCache.eachHeight.StringForEachHeight())
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (m MetricsThreshold) handleWriteToFileCSVForVoteStep() error {
-	file, err := os.OpenFile(pathBlockVoteStep, os.O_WRONLY|os.O_APPEND, os.ModeAppend)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	writer := csv.NewWriter(file)
-	defer writer.Flush()
-
-	err = writer.Write(m.metricsCache.StringForVotingPrecommitStep())
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (m MetricsThreshold) handleWriteToFileCSVForProposalStep() error {
-	file, err := os.OpenFile(pathBlockProposalStep, os.O_WRONLY|os.O_APPEND, os.ModeAppend)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	writer := csv.NewWriter(file)
-	defer writer.Flush()
-
-	err = writer.Write(m.metricsCache.StringForProposalStep())
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (m MetricsThreshold) handleP2P() error {
+func (m MetricsThreshold) CSVTimeStep() error {
 	file, err := os.OpenFile(pathBlockP2P, os.O_WRONLY|os.O_APPEND, os.ModeAppend)
 	if err != nil {
 		return err
@@ -283,16 +218,8 @@ func (m MetricsThreshold) handleP2P() error {
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
 
-	for _, j := range p2p.ToStrings() {
-		n := []string{}
-		// Height,
-		n = append(n, strconv.FormatInt(m.metricsCache.height, 10))
-		// Rounds,
-		n = append(n, strconv.Itoa(int(m.metricsCache.round)))
-
-		n = append(n, j...)
-
-		err = writer.Write(n)
+	for _, j := range m.metricsCache.StringEachStep() {
+		err = writer.Write(j)
 		if err != nil {
 			return err
 		}
@@ -301,12 +228,72 @@ func (m MetricsThreshold) handleP2P() error {
 	return nil
 }
 
-func (m metricsCache) StringForEachHeight() []string {
+func (m MetricsThreshold) CSVVoteStep() error {
+	file, err := os.OpenFile(pathBlockP2P, os.O_WRONLY|os.O_APPEND, os.ModeAppend)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	for _, j := range m.metricsCache.StringEachVoteStep() {
+		err = writer.Write(j)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (m MetricsThreshold) CSVProposalStep() error {
+	file, err := os.OpenFile(pathBlockP2P, os.O_WRONLY|os.O_APPEND, os.ModeAppend)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	for _, j := range m.metricsCache.StringForProposalStep() {
+		err = writer.Write(j)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (m MetricsThreshold) CSVP2P() error {
+	file, err := os.OpenFile(pathBlockP2P, os.O_WRONLY|os.O_APPEND, os.ModeAppend)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	for _, j := range m.metricsCache.StringForP2PStep() {
+		err = writer.Write(j)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (m blockHeight) StringForEachHeight() []string {
 	forheight := []string{}
 	// Height,
 	forheight = append(forheight, strconv.FormatInt(m.height, 10))
 	// Rounds,
-	forheight = append(forheight, strconv.Itoa(int(m.round)))
+	forheight = append(forheight, strconv.Itoa(int(m.numRound)))
 	// BlockIntervalSeconds,
 	forheight = append(forheight, strconv.FormatFloat(m.blockIntervalSeconds, 'f', -1, 64))
 	// NumTxs,
@@ -314,111 +301,136 @@ func (m metricsCache) StringForEachHeight() []string {
 	// BlockSizeBytes,
 	forheight = append(forheight, strconv.Itoa(m.blockSizeBytes))
 	// BlockParts,
-	forheight = append(forheight, strconv.Itoa(len(m.blockPartsReceived)))
-
-	for _, value := range m.blockPartsReceived {
-		forheight = append(forheight, strconv.FormatInt(int64(value), 10))
-	}
+	forheight = append(forheight, strconv.Itoa(int(m.blockParts)))
 
 	// BlockGossipPartsReceived
-	for _, j := range m.notBlockGossipPartsReceived {
-		if j {
-			forheight = append(forheight, "false")
-		} else {
-			forheight = append(forheight, "true")
-		}
-	}
-	// QuorumPrevoteDelay,
-	forheight = append(forheight, strconv.Itoa(len(m.quorumPrevoteDelay)))
-	for _, j := range m.quorumPrevoteDelay {
-		forheight = append(forheight, j.add)
-		forheight = append(forheight, strconv.FormatFloat(j.time, 'f', -1, 64))
-	}
+	forheight = append(forheight, strconv.Itoa(m.blockGossipPartsReceived))
 
-	// FullPrevoteDelay,
-	forheight = append(forheight, strconv.FormatBool(m.fullPrevoteDelay.isHasAll), m.fullPrevoteDelay.address, strconv.FormatFloat(m.fullPrevoteDelay.time, 'f', -1, 64))
+	// QuorumPrevoteDelay,
+	forheight = append(forheight, strconv.FormatFloat(m.quorumPrevoteDelay, 'f', -1, 64))
+
+	// full delay
+	forheight = append(forheight, strconv.FormatFloat(m.fullPrevoteDelay, 'f', -1, 64))
+
 	// ProposalReceiveCount,
 	status := "accepted"
 	if !m.proposalProcessed {
 		status = "rejected"
 	}
 	forheight = append(forheight, status)
-	// LateVotes
-	forheight = append(forheight, strconv.Itoa(len(m.lateVote)))
-	forheight = append(forheight, m.lateVote...)
 
 	return forheight
 }
 
-func (m metricsCache) StringForEachStep() []string {
-	forStep := []string{strconv.FormatInt(m.height, 10)}
+func (m metricsCache) StringEachStep() [][]string {
+	forStep := [][]string{}
 
-	for _, timeStep := range m.steps {
-		forStep = append(forStep, strconv.FormatFloat(timeStep, 'f', -1, 64))
+	for _, timeStep := range m.eachTime {
+		tmp := []string{}
+		tmp = append(tmp, strconv.FormatInt(timeStep.height, 10))
+		tmp = append(tmp, strconv.FormatInt(int64(timeStep.roundId), 10))
+		tmp = append(tmp, timeStep.stepName)
+		tmp = append(tmp, strconv.FormatFloat(timeStep.stepTime, 'f', -1, 64))
+
+		forStep = append(forStep, tmp)
 	}
 	return forStep
 }
 
-func (m metricsCache) StringForVotingPrecommitStep() []string {
-	forheight := []string{}
+func (m metricsCache) StringEachVoteStep() [][]string {
+	forStep := [][]string{}
+	for _, voteStep := range m.eachVote {
+		tmp := []string{}
+		tmp = append(tmp, strconv.FormatInt(voteStep.height, 10))
+		tmp = append(tmp, strconv.FormatInt(voteStep.roundId, 10))
+		tmp = append(tmp, voteStep.step)
+		tmp = append(tmp, strconv.FormatInt(voteStep.validatorsPower, 10))
+		tmp = append(tmp, strconv.FormatInt(voteStep.missingValidatorsPowerPrevote, 10))
 
-	forheight = append(forheight, strconv.FormatInt(m.height, 10))
-	forheight = append(forheight, strconv.Itoa(int(m.round)))
-
-	forheight = append(forheight, strconv.FormatInt(m.validatorsPower, 10))
-	forheight = append(forheight, strconv.FormatInt(m.missingValidatorsPowerPrevote, 10))
-	forheight = append(forheight, strconv.FormatInt(m.missingValidatorsPower, 10))
-
-	return forheight
+		forStep = append(forStep, tmp)
+	}
+	return forStep
 }
 
-func (m metricsCache) StringForProposalStep() []string {
-	forheight := []string{}
+func (m metricsCache) StringForProposalStep() [][]string {
+	forStep := [][]string{}
+	for _, voteStep := range m.eachProposal {
+		tmp := []string{}
+		tmp = append(tmp, strconv.FormatInt(voteStep.height, 10))
+		tmp = append(tmp, strconv.FormatInt(int64(voteStep.roundId), 10))
+		tmp = append(tmp, voteStep.step)
+		tmp = append(tmp, strconv.FormatInt(int64(voteStep.numblockParts), 10))
+		tmp = append(tmp, strconv.FormatInt(int64(voteStep.blockPartsReceived), 10))
 
-	forheight = append(forheight, strconv.FormatInt(m.height, 10))
-	forheight = append(forheight, strconv.Itoa(int(m.round)))
-
-	forheight = append(forheight, strconv.Itoa(len(m.blockPartsReceived)))
-	for _, value := range m.blockPartsReceived {
-		forheight = append(forheight, strconv.FormatInt(int64(value), 10))
+		forStep = append(forStep, tmp)
 	}
-
-	edundantBlockpartsReceived := filterSlice(m.blockParts, m.blockPartsReceived)
-	forheight = append(forheight, strconv.Itoa(len(edundantBlockpartsReceived)))
-	forheight = append(forheight, edundantBlockpartsReceived...)
-
-	forheight = append(forheight, strconv.FormatInt(int64(m.numblockParts), 10))
-	return forheight
+	return forStep
 }
 
-func filterSlice(a, b []uint32) []string {
-	result := []string{}
+func (m metricsCache) StringForP2PStep() [][]string {
+	forStep := [][]string{}
+	for _, voteStep := range m.eachMsg {
+		tmp := []string{}
+		tmp = append(tmp, strconv.FormatInt(voteStep.height, 10))
+		tmp = append(tmp, strconv.FormatInt(int64(voteStep.roundId), 10))
+		tmp = append(tmp, voteStep.step)
+		tmp = append(tmp, voteStep.fromPeer)
+		tmp = append(tmp, voteStep.toPeer)
+		tmp = append(tmp, voteStep.chID)
+		tmp = append(tmp, voteStep.msgType)
+		tmp = append(tmp, strconv.Itoa(voteStep.size))
+		tmp = append(tmp, voteStep.rawByte)
 
-	// Create a map to store the elements of slice b for quick inspection
-	bMap := make(map[uint32]bool)
-	for _, v := range b {
-		bMap[v] = true
+		forStep = append(forStep, tmp)
 	}
-	// Filter elements of slice a
-	for _, v := range a {
-		if !bMap[v] {
-			result = append(result, strconv.FormatInt(int64(v), 10))
-		}
-	}
-
-	return result
+	return forStep
 }
 
-func removeDuplicates(s []uint32) []uint32 {
-	encountered := map[uint32]bool{}
-	result := []uint32{}
-
-	for _, v := range s {
-		if !encountered[v] {
-			encountered[v] = true
-			result = append(result, v)
-		}
+func (m *MetricsThreshold) MarkStepTimes(s cstypes.RoundStepType, height int64, roundID uint32) {
+	if !m.stepStart.IsZero() {
+		stepT := time.Since(m.stepStart).Seconds()
+		stepN := strings.TrimPrefix(s.String(), "RoundStep")
+		m.metricsCache.eachTime = append(m.metricsCache.eachTime, stepTime{height: height, roundId: roundID, stepName: stepN, stepTime: stepT})
 	}
 
-	return result
+	m.stepStart = time.Now()
+}
+
+func (m *MetricsThreshold) handleSaveNewStep(height int64, roundId int64, step string) {
+	m.metricsCache.eachProposal = append(m.metricsCache.eachProposal, stepProposal{
+		height:             height,
+		roundId:            roundId,
+		step:               step,
+		numblockParts:      m.metricsCache.numblockPartsTemporary,
+		blockPartsReceived: m.metricsCache.blockPartsReceivedTemporary,
+	})
+
+	m.metricsCache.eachVote = append(m.metricsCache.eachVote, stepVote{
+		height:                        height,
+		roundId:                       roundId,
+		step:                          step,
+		validatorsPower:               m.metricsCache.validatorsPowerTemporary,
+		missingValidatorsPowerPrevote: m.metricsCache.missingValidatorsPowerPrevoteTemporary,
+	})
+
+	for _, msg := range p2p.CacheMetricLongBlock {
+		m.metricsCache.eachMsg = append(m.metricsCache.eachMsg, stepMessageP2P{
+			height:  height,
+			roundId: roundId,
+			step:    step,
+
+			fromPeer: msg.FromPeer,
+			toPeer:   msg.ToPeer,
+			chID:     msg.ChID,
+			msgType:  msg.TypeIs,
+			size:     msg.Size,
+			rawByte:  msg.RawByte,
+		})
+	}
+	m.metricsCache.numblockPartsTemporary = 0
+	m.metricsCache.blockPartsReceivedTemporary = 0
+
+	m.metricsCache.validatorsPowerTemporary = 0
+	m.metricsCache.missingValidatorsPowerPrevoteTemporary = 0
+	p2p.ResetCacheMetrics()
 }
