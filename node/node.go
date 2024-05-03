@@ -121,7 +121,6 @@ func DefaultMetricsProvider(config *cfg.InstrumentationConfig) MetricsProvider {
 	return func(chainID string) (*cs.Metrics, *p2p.Metrics, *mempl.Metrics, *sm.Metrics, *proxy.Metrics) {
 		if config.Prometheus {
 			return cs.PrometheusMetrics(config.Namespace, "chain_id", chainID),
-
 				p2p.PrometheusMetrics(config.Namespace, "chain_id", chainID),
 				mempl.PrometheusMetrics(config.Namespace, "chain_id", chainID),
 				sm.PrometheusMetrics(config.Namespace, "chain_id", chainID),
@@ -470,7 +469,6 @@ func createConsensusReactor(config *cfg.Config,
 	evidencePool *evidence.Pool,
 	privValidator types.PrivValidator,
 	csMetrics *cs.Metrics,
-
 	waitSync bool,
 	eventBus *types.EventBus,
 	consensusLogger log.Logger,
@@ -691,7 +689,6 @@ func startStateSync(ssR *statesync.Reactor, bcR blockSyncReactor, conR *cs.React
 			// FIXME Very ugly to have these metrics bleed through here.
 			conR.Metrics.StateSyncing.Set(0)
 			conR.Metrics.BlockSyncing.Set(1)
-
 			err = bcR.SwitchToBlockSync(state)
 			if err != nil {
 				ssR.Logger.Error("Failed to switch to block sync", "err", err)

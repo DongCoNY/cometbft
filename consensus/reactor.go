@@ -125,11 +125,8 @@ func (conR *Reactor) SwitchToConsensus(state sm.State, skipWAL bool) {
 	conR.mtx.Lock()
 	conR.waitSync = false
 	conR.mtx.Unlock()
-
 	conR.Metrics.BlockSyncing.Set(0)
 	conR.Metrics.StateSyncing.Set(0)
-
-	// conR.MetricsThreshold.metricsCache.cacheSyncing = true
 
 	if skipWAL {
 		conR.conS.doWALCatchup = false
@@ -997,11 +994,6 @@ func (conR *Reactor) StringIndented(indent string) string {
 	}
 	s += indent + "}"
 	return s
-}
-
-// ReactorThresholdMetrics sets the metricsThreshold
-func ReactorMetricsThreshold(metricsThreshold *MetricsThreshold) ReactorOption {
-	return func(conR *Reactor) { conR.MetricsThreshold = metricsThreshold }
 }
 
 // ReactorMetrics sets the metrics
