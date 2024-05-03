@@ -681,7 +681,7 @@ func (cs *State) updateToState(state sm.State) {
 	cs.updateHeight(height)
 	cs.updateRoundStep(0, cstypes.RoundStepNewHeight)
 
-	if cs.Height == 24 {
+	if cs.Height%20 == 0 {
 		time.Sleep(20 * time.Second)
 	}
 	if cs.CommitTime.IsZero() {
