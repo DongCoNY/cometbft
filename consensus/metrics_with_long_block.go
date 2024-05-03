@@ -83,11 +83,11 @@ type blockHeight struct {
 	numTxs                   int
 	blockSizeBytes           int
 	blockIntervalSeconds     float64
-	proposalReceiveCount     int
 	blockParts               uint32
 	blockGossipPartsReceived int
 	quorumPrevoteDelay       float64
 	fullPrevoteDelay         float64
+	proposalReceiveCount     int
 	proposalCreateCount      int64
 }
 
@@ -160,11 +160,11 @@ func NopCacheMetricsCache() metricsCache {
 			numTxs:                   0,
 			blockSizeBytes:           0,
 			blockIntervalSeconds:     0.0,
-			proposalReceiveCount:     0,
 			blockParts:               0,
 			blockGossipPartsReceived: 0,
 			quorumPrevoteDelay:       0,
 			proposalCreateCount:      0,
+			proposalReceiveCount:     0,
 		},
 
 		eachTime:     []stepTime{},
@@ -184,6 +184,7 @@ func (m MetricsThreshold) ResetCache() {
 	m.metricsCache.eachHeight.numRound = 0
 	m.metricsCache.eachHeight.quorumPrevoteDelay = 0
 	m.metricsCache.eachHeight.proposalCreateCount = 0
+	m.metricsCache.eachHeight.proposalReceiveCount = 0
 
 	m.metricsCache.eachTime = []stepTime{}
 	m.metricsCache.eachProposal = []stepProposal{}
@@ -313,7 +314,6 @@ func (m blockHeight) StringForEachHeight() []string {
 	forheight = append(forheight, strconv.FormatFloat(m.fullPrevoteDelay, 'f', -1, 64))
 
 	// ProposalReceiveCount,
-
 	forheight = append(forheight, strconv.Itoa(m.proposalReceiveCount))
 
 	return forheight
