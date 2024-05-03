@@ -1866,8 +1866,6 @@ func (cs *State) recordMetrics(height int64, block *types.Block) {
 	cs.metrics.MissingValidators.Set(float64(missingValidators))
 	cs.metrics.MissingValidatorsPower.Set(float64(missingValidatorsPower))
 
-	// cs.metricsThreshold.metricsCache.missingValidatorsPowerTemporary = missingValidatorsPower
-
 	// NOTE: byzantine validators power and count is only for consensus evidence i.e. duplicate vote
 	var (
 		byzantineValidatorsPower = int64(0)
