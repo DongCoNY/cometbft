@@ -179,7 +179,7 @@ func NopCacheMetricsCache() metricsCache {
 	}
 }
 
-func (m MetricsThreshold) ResetCache() {
+func (m *MetricsThreshold) ResetCache() {
 	m.metricsCache.eachHeight.blockGossipPartsReceived = 0
 	m.metricsCache.eachHeight.numRound = 0
 	m.metricsCache.eachHeight.quorumPrevoteDelay = 0
@@ -294,7 +294,7 @@ func (m blockHeight) StringForEachHeight() []string {
 	// Height,
 	forheight = append(forheight, strconv.FormatInt(m.height, 10))
 	// Rounds,
-	forheight = append(forheight, strconv.Itoa(int(m.numRound)))
+	forheight = append(forheight, strconv.Itoa(m.numRound))
 	// BlockIntervalSeconds,
 	forheight = append(forheight, strconv.FormatFloat(m.blockIntervalSeconds, 'f', -1, 64))
 	// NumTxs,
