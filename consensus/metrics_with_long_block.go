@@ -396,6 +396,7 @@ func (m *MetricsThreshold) MarkStepTimes(s cstypes.RoundStepType, height int64, 
 }
 
 func (m *MetricsThreshold) handleSaveNewStep(height int64, roundId int64, step string) {
+	step = strings.TrimPrefix(step, "RoundStep")
 	m.metricsCache.eachProposal = append(m.metricsCache.eachProposal, stepProposal{
 		height:             height,
 		roundId:            roundId,
