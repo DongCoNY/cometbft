@@ -15,6 +15,7 @@ import (
 )
 
 var (
+	metricTimeOut         MetricsThreshold
 	pathBlockProposalStep string
 	pathBlockVoteStep     string
 	pathBlock             string
@@ -23,6 +24,9 @@ var (
 )
 
 func init() {
+	metricTimeOut.NopMetricsThreshold()
+	metricTimeOut.timeThreshold = 5 * time.Second
+
 	home, _ := os.UserHomeDir()
 
 	metricspath := filepath.Join(home, "cometbft-metrics")
@@ -59,11 +63,9 @@ func init() {
 	}
 }
 
-func NopMetricsThreshold() *MetricsThreshold {
-	return &MetricsThreshold{
-		stepStart:    time.Now(),
-		metricsCache: NopCacheMetricsCache(),
-	}
+func (m *MetricsThreshold) NopMetricsThreshold() {
+	m.stepStart = time.Now()
+	m.metricsCache = NopCacheMetricsCache()
 }
 
 // Metrics contains metrics exposed by this package.
