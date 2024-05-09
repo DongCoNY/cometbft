@@ -432,6 +432,17 @@ func createMConnection(
 		}
 		p.metrics.PeerReceiveBytesTotal.With(labels...).Add(float64(len(msgBytes)))
 		p.metrics.MessageReceiveBytesTotal.With("message_type", p.mlc.ValueToMetricLabel(msg)).Add(float64(len(msgBytes)))
+
+		metricLabelValue := p.mlc.ValueToMetricLabel(msg)
+		n := cacheMetricsMsg{
+			ToPeer:  string(p.ID()),
+			TypeIs:  metricLabelValue,
+			Size:    len(msgBytes),
+			ChID:    fmt.Sprintf("%#x", chID),
+			RawByte: fmt.Sprintf("%#x", msgBytes),
+		}
+		CacheMetricLongBlock = append(CacheMetricLongBlock, n)
+
 		reactor.ReceiveEnvelope(Envelope{
 			ChannelID: chID,
 			Src:       p,
