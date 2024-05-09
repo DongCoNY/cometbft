@@ -243,7 +243,6 @@ func (cs *State) GetRoundState() *cstypes.RoundState {
 // GetRoundStateJSON returns a json of RoundState.
 func (cs *State) GetRoundStateJSON() ([]byte, error) {
 	cs.mtx.RLock()
-	fmt.Println("xxxxx", x)
 	defer cs.mtx.RUnlock()
 	return cmtjson.Marshal(cs.RoundState)
 }
@@ -518,6 +517,7 @@ func (cs *State) SetProposalAndBlock(
 func (cs *State) updateHeight(height int64) {
 	cs.metrics.Height.Set(float64(height))
 	cs.Height = height
+	fmt.Println("xxxxx", x)
 }
 
 func (cs *State) updateRoundStep(round int32, step cstypes.RoundStepType) {
