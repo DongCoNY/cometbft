@@ -243,6 +243,7 @@ func (cs *State) GetRoundState() *cstypes.RoundState {
 // GetRoundStateJSON returns a json of RoundState.
 func (cs *State) GetRoundStateJSON() ([]byte, error) {
 	cs.mtx.RLock()
+	fmt.Println(x)
 	defer cs.mtx.RUnlock()
 	return cmtjson.Marshal(cs.RoundState)
 }

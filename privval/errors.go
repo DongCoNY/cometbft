@@ -5,8 +5,6 @@ import (
 	"fmt"
 )
 
-var x int
-
 // EndpointTimeoutError occurs when endpoint times out.
 type EndpointTimeoutError struct{}
 

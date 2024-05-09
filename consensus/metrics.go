@@ -11,6 +11,12 @@ import (
 	"github.com/cometbft/cometbft/types"
 )
 
+var x int
+
+func init() {
+	x = 0
+}
+
 const (
 	// MetricsSubsystem is a subsystem shared by all metrics exposed by this
 	// package.
@@ -136,6 +142,7 @@ func (m *Metrics) MarkVoteReceived(vt cmtproto.SignedMsgType, power, totalPower 
 	p := float64(power) / float64(totalPower)
 	n := strings.ToLower(strings.TrimPrefix(vt.String(), "SIGNED_MSG_TYPE_"))
 	m.RoundVotingPowerPercent.With("vote_type", n).Add(p)
+	x++
 }
 
 func (m *Metrics) MarkRound(r int32, st time.Time) {
