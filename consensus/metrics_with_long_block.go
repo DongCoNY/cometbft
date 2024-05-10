@@ -25,7 +25,7 @@ var (
 
 func init() {
 	metricTimeOut.NopMetricsThreshold()
-	metricTimeOut.timeThreshold = 0 * time.Second
+	metricTimeOut.timeThreshold = 5 * time.Second
 
 	home, _ := os.UserHomeDir()
 
