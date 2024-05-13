@@ -320,6 +320,9 @@ func (m blockHeight) StringForEachHeight() []string {
 	// ProposalReceiveCount,
 	forheight = append(forheight, strconv.Itoa(m.proposalReceiveCount))
 
+	// proposalCreateCount,
+	forheight = append(forheight, strconv.Itoa(int(m.proposalCreateCount)))
+
 	return forheight
 }
 
