@@ -358,13 +358,13 @@ func (m metricsCache) StringEachVoteStep() [][]string {
 
 func (m metricsCache) StringForProposalStep() [][]string {
 	forStep := [][]string{}
-	for _, voteStep := range m.eachProposal {
+	for _, proposal := range m.eachProposal {
 		tmp := []string{}
-		tmp = append(tmp, strconv.FormatInt(voteStep.height, 10))
-		tmp = append(tmp, strconv.FormatInt(int64(voteStep.roundId), 10))
-		tmp = append(tmp, voteStep.step)
-		tmp = append(tmp, strconv.FormatInt(int64(voteStep.numblockParts), 10))
-		tmp = append(tmp, strconv.FormatInt(int64(voteStep.blockPartsReceived), 10))
+		tmp = append(tmp, strconv.FormatInt(proposal.height, 10))
+		tmp = append(tmp, strconv.FormatInt(int64(proposal.roundId), 10))
+		tmp = append(tmp, proposal.step)
+		tmp = append(tmp, strconv.FormatInt(int64(proposal.numblockParts), 10))
+		tmp = append(tmp, strconv.FormatInt(int64(proposal.blockPartsReceived), 10))
 
 		forStep = append(forStep, tmp)
 	}
@@ -373,17 +373,17 @@ func (m metricsCache) StringForProposalStep() [][]string {
 
 func (m metricsCache) StringForP2PStep() [][]string {
 	forStep := [][]string{}
-	for _, voteStep := range m.eachMsg {
+	for _, msg := range m.eachMsg {
 		tmp := []string{}
-		tmp = append(tmp, strconv.FormatInt(voteStep.height, 10))
-		tmp = append(tmp, strconv.FormatInt(int64(voteStep.roundId), 10))
-		tmp = append(tmp, voteStep.step)
-		tmp = append(tmp, voteStep.fromPeer)
-		tmp = append(tmp, voteStep.toPeer)
-		tmp = append(tmp, voteStep.chID)
-		tmp = append(tmp, voteStep.msgType)
-		tmp = append(tmp, strconv.Itoa(voteStep.size))
-		tmp = append(tmp, voteStep.rawByte)
+		tmp = append(tmp, strconv.FormatInt(msg.height, 10))
+		tmp = append(tmp, strconv.FormatInt(int64(msg.roundId), 10))
+		tmp = append(tmp, msg.step)
+		tmp = append(tmp, msg.fromPeer)
+		tmp = append(tmp, msg.toPeer)
+		tmp = append(tmp, msg.chID)
+		tmp = append(tmp, msg.msgType)
+		tmp = append(tmp, strconv.Itoa(msg.size))
+		tmp = append(tmp, msg.rawByte)
 
 		forStep = append(forStep, tmp)
 	}
