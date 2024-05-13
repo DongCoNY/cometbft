@@ -527,7 +527,6 @@ func (cs *State) updateHeight(height int64) {
 	metricTimeOut.ResetCache()
 	metricTimeOut.timeOldHeight = time.Now()
 	metricTimeOut.metricsCache.eachHeight.height = height
-	fmt.Println("heheeeeeeeeeee")
 }
 
 func (cs *State) updateRoundStep(round int32, step cstypes.RoundStepType) {
