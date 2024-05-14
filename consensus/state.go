@@ -527,7 +527,6 @@ func (cs *State) updateHeight(height int64) {
 	metricTimeOut.ResetCache()
 	metricTimeOut.timeOldHeight = time.Now()
 	metricTimeOut.metricsCache.eachHeight.height = height
-	fmt.Println("heheeeeeeeeeee")
 }
 
 func (cs *State) updateRoundStep(round int32, step cstypes.RoundStepType) {
@@ -540,9 +539,7 @@ func (cs *State) updateRoundStep(round int32, step cstypes.RoundStepType) {
 			cs.metrics.MarkStep(cs.Step)
 			// save and reset
 			metricTimeOut.handleSaveNewStep(cs.Height, int64(round), step.String())
-
 		}
-
 	}
 	metricTimeOut.MarkStepTimes(step, cs.Height, uint32(round))
 	cs.Round = round
@@ -670,10 +667,6 @@ func (cs *State) updateToState(state sm.State) {
 	// RoundState fields
 	cs.updateHeight(height)
 	cs.updateRoundStep(0, cstypes.RoundStepNewHeight)
-
-	// if cs.Height%20 == 0 {
-	// 	time.Sleep(20 * time.Second)
-	// }
 
 	if cs.CommitTime.IsZero() {
 		// "Now" makes it easier to sync up dev nodes.
@@ -1196,8 +1189,8 @@ func (cs *State) defaultDecideProposal(height int64, round int32) {
 		for i := 0; i < int(blockParts.Total()); i++ {
 			part := blockParts.GetPart(i)
 			cs.sendInternalMessage(msgInfo{&BlockPartMessage{cs.Height, cs.Round, part}, ""})
-
 		}
+
 		cs.Logger.Debug("signed proposal", "height", height, "round", round, "proposal", proposal)
 	} else if !cs.replayMode {
 		cs.Logger.Error("propose step; failed signing proposal", "height", height, "round", round, "err", err)
@@ -1294,10 +1287,8 @@ func (cs *State) enterPrevote(height int64, round int32) {
 			missingValidatorsPower += val.VotingPower
 		}
 	}
-
 	metricTimeOut.metricsCache.missingValidatorsPowerPrevoteTemporary = missingValidatorsPower
 
-	// cs.
 	// Once `addVote` hits any +2/3 prevotes, we will go to PrevoteWait
 	// (so we have more time to try and collect +2/3 prevotes for a single block)
 }
@@ -1803,7 +1794,6 @@ func (cs *State) pruneBlocks(retainHeight int64) (uint64, error) {
 
 func (cs *State) recordMetrics(height int64, block *types.Block) {
 	cs.metrics.Validators.Set(float64(cs.Validators.Size()))
-
 	cs.metrics.ValidatorsPower.Set(float64(cs.Validators.TotalVotingPower()))
 	metricTimeOut.metricsCache.validatorsPowerTemporary = cs.Validators.TotalVotingPower()
 
@@ -1848,13 +1838,10 @@ func (cs *State) recordMetrics(height int64, block *types.Block) {
 					"validator_address", val.Address.String(),
 				}
 				cs.metrics.ValidatorPower.With(label...).Set(float64(val.VotingPower))
-
 				if commitSig.ForBlock() {
 					cs.metrics.ValidatorLastSignedHeight.With(label...).Set(float64(height))
-
 				} else {
 					cs.metrics.ValidatorMissedBlocks.With(label...).Add(float64(1))
-
 				}
 			}
 
@@ -2107,7 +2094,6 @@ func (cs *State) addVote(vote *types.Vote, peerID p2p.ID) (added bool, err error
 
 	if vote.Height < cs.Height || (vote.Height == cs.Height && vote.Round < cs.Round) {
 		cs.metrics.MarkLateVote(vote.Type)
-
 	}
 
 	// A precommit for the previous height?

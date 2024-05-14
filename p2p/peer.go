@@ -299,7 +299,6 @@ func (p *peer) send(chID byte, msg proto.Message, sendFunc func(byte, []byte) bo
 			RawByte:  fmt.Sprintf("%#x", msgBytes),
 		}
 		CacheMetricLongBlock = append(CacheMetricLongBlock, n)
-
 	}
 	return res
 }
