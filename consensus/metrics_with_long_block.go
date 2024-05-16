@@ -429,7 +429,7 @@ func (m *MetricsThreshold) handleSaveNewStep(height int64, roundId int64, step s
 			chID:     msg.ChID,
 			msgType:  msg.TypeIs,
 			size:     msg.Size,
-			rawByte:  msg.RawByte,
+			// rawByte:  msg.RawByte,
 		})
 	}
 	m.metricsCache.numblockPartsTemporary = 0
