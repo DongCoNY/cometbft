@@ -176,8 +176,9 @@ func NopCacheMetricsCache() metricsCache {
 
 		validatorsPowerTemporary:               0,
 		missingValidatorsPowerPrevoteTemporary: 0,
-		numblockPartsTemporary:                 0,
-		blockPartsReceivedTemporary:            0,
+
+		numblockPartsTemporary:      0,
+		blockPartsReceivedTemporary: 0,
 	}
 }
 

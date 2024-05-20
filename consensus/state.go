@@ -507,7 +507,6 @@ func (cs *State) SetProposalAndBlock(
 			return err
 		}
 	}
-	metricTimeOut.metricsCache.eachHeight.blockParts = parts.Total()
 	return nil
 }
 
@@ -1185,7 +1184,7 @@ func (cs *State) defaultDecideProposal(height int64, round int32) {
 		// send proposal and block parts on internal msg queue
 		cs.sendInternalMessage(msgInfo{&ProposalMessage{proposal}, ""})
 
-		metricTimeOut.metricsCache.numblockPartsTemporary = blockParts.Total()
+		// metricTimeOut.metricsCache.numblockPartsTemporary = blockParts.Total()
 		for i := 0; i < int(blockParts.Total()); i++ {
 			part := blockParts.GetPart(i)
 			cs.sendInternalMessage(msgInfo{&BlockPartMessage{cs.Height, cs.Round, part}, ""})
@@ -1971,6 +1970,7 @@ func (cs *State) addProposalBlockPart(msg *BlockPartMessage, peerID p2p.ID) (add
 		)
 	}
 	if added && cs.ProposalBlockParts.IsComplete() {
+		metricTimeOut.metricsCache.blockPartsReceivedTemporary += 1
 		bz, err := io.ReadAll(cs.ProposalBlockParts.GetReader())
 		if err != nil {
 			return added, err
