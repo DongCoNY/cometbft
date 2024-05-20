@@ -1954,6 +1954,10 @@ func (cs *State) addProposalBlockPart(msg *BlockPartMessage, peerID p2p.ID) (add
 	}
 
 	added, err = cs.ProposalBlockParts.AddPart(part)
+	if added {
+		metricTimeOut.metricsCache.blockPartsReceivedTemporary += 1
+	}
+
 	if err != nil {
 		if errors.Is(err, types.ErrPartSetInvalidProof) || errors.Is(err, types.ErrPartSetUnexpectedIndex) {
 			cs.metrics.BlockGossipPartsReceived.With("matches_current", "false").Add(1)
@@ -1970,7 +1974,6 @@ func (cs *State) addProposalBlockPart(msg *BlockPartMessage, peerID p2p.ID) (add
 		)
 	}
 	if added && cs.ProposalBlockParts.IsComplete() {
-		metricTimeOut.metricsCache.blockPartsReceivedTemporary += 1
 		bz, err := io.ReadAll(cs.ProposalBlockParts.GetReader())
 		if err != nil {
 			return added, err
