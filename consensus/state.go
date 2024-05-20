@@ -536,11 +536,11 @@ func (cs *State) updateRoundStep(round int32, step cstypes.RoundStepType) {
 		}
 		if cs.Step != step {
 			cs.metrics.MarkStep(cs.Step)
+			metricTimeOut.MarkStepTimes(step, cs.Height, uint32(round))
 			// save and reset
 			metricTimeOut.handleSaveNewStep(cs.Height, int64(round), step.String())
 		}
 	}
-	metricTimeOut.MarkStepTimes(step, cs.Height, uint32(round))
 	cs.Round = round
 	cs.Step = step
 }

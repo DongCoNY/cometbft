@@ -64,7 +64,6 @@ func init() {
 }
 
 func (m *MetricsThreshold) NopMetricsThreshold() {
-	m.stepStart = time.Now()
 	m.metricsCache = NopCacheMetricsCache()
 }
 
@@ -148,10 +147,12 @@ type metricsCache struct {
 
 func (m *MetricsThreshold) WriteToFileCSV() {
 	m.CSVEachHeight()
-	m.CSVP2P()
 	m.CSVProposalStep()
 	m.CSVTimeStep()
 	m.CSVVoteStep()
+	if time.Since(m.timeOldHeight) > 5*time.Second {
+		m.CSVP2P()
+	}
 }
 
 func NopCacheMetricsCache() metricsCache {
@@ -193,8 +194,6 @@ func (m *MetricsThreshold) ResetCache() {
 	m.metricsCache.eachProposal = []stepProposal{}
 	m.metricsCache.eachVote = []stepVote{}
 	m.metricsCache.eachMsg = []stepMessageP2P{}
-
-	m.metricsCache.blockPartsReceivedTemporary = 0
 }
 
 func (m MetricsThreshold) CSVEachHeight() error {
