@@ -525,7 +525,7 @@ func (cs *State) updateHeight(height int64) {
 	p2p.ResetCacheMetrics()
 	metricTimeOut.ResetCache()
 	metricTimeOut.timeOldHeight = time.Now()
-	metricTimeOut.metricsCache.eachHeight.height = height
+	metricTimeOut.metricsCache.height = height
 }
 
 func (cs *State) updateRoundStep(round int32, step cstypes.RoundStepType) {
@@ -536,9 +536,9 @@ func (cs *State) updateRoundStep(round int32, step cstypes.RoundStepType) {
 		}
 		if cs.Step != step {
 			cs.metrics.MarkStep(cs.Step)
-			metricTimeOut.MarkStepTimes(step, cs.Height, uint32(round))
+			metricTimeOut.MarkStepTimes(step, uint32(round))
 			// save and reset
-			metricTimeOut.handleSaveNewStep(cs.Height, int64(round), step.String())
+			metricTimeOut.handleSaveNewStep(int64(round), step.String())
 		}
 	}
 	cs.Round = round

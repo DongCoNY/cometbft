@@ -131,8 +131,9 @@ type stepMessageP2P struct {
 }
 
 type metricsCache struct {
-	eachHeight blockHeight
+	height int64
 
+	eachHeight   blockHeight
 	eachTime     []stepTime
 	eachProposal []stepProposal
 	eachVote     []stepVote
@@ -157,6 +158,7 @@ func (m *MetricsThreshold) WriteToFileCSV() {
 
 func NopCacheMetricsCache() metricsCache {
 	return metricsCache{
+		height: 0,
 		eachHeight: blockHeight{
 			height:                   0,
 			numRound:                 0,
@@ -206,7 +208,7 @@ func (m MetricsThreshold) CSVEachHeight() error {
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
 
-	err = writer.Write(m.metricsCache.eachHeight.StringForEachHeight())
+	err = writer.Write(m.metricsCache.StringForEachHeight())
 	if err != nil {
 		return err
 	}
@@ -293,35 +295,36 @@ func (m MetricsThreshold) CSVP2P() error {
 	return nil
 }
 
-func (m blockHeight) StringForEachHeight() []string {
+func (m metricsCache) StringForEachHeight() []string {
 	forheight := []string{}
 	// Height,
-	forheight = append(forheight, strconv.FormatInt(m.height, 10))
+	m.eachHeight.height = m.height
+	forheight = append(forheight, strconv.FormatInt(m.eachHeight.height, 10))
 	// Rounds,
-	forheight = append(forheight, strconv.Itoa(m.numRound))
+	forheight = append(forheight, strconv.Itoa(m.eachHeight.numRound))
 	// BlockIntervalSeconds,
-	forheight = append(forheight, strconv.FormatFloat(m.blockIntervalSeconds, 'f', -1, 64))
+	forheight = append(forheight, strconv.FormatFloat(m.eachHeight.blockIntervalSeconds, 'f', -1, 64))
 	// NumTxs,
-	forheight = append(forheight, strconv.Itoa(m.numTxs))
+	forheight = append(forheight, strconv.Itoa(m.eachHeight.numTxs))
 	// BlockSizeBytes,
-	forheight = append(forheight, strconv.Itoa(m.blockSizeBytes))
+	forheight = append(forheight, strconv.Itoa(m.eachHeight.blockSizeBytes))
 	// BlockParts,
-	forheight = append(forheight, strconv.Itoa(int(m.blockParts)))
+	forheight = append(forheight, strconv.Itoa(int(m.eachHeight.blockParts)))
 
 	// BlockGossipPartsReceived
-	forheight = append(forheight, strconv.Itoa(m.blockGossipPartsReceived))
+	forheight = append(forheight, strconv.Itoa(m.eachHeight.blockGossipPartsReceived))
 
 	// QuorumPrevoteDelay,
-	forheight = append(forheight, strconv.FormatFloat(m.quorumPrevoteDelay, 'f', -1, 64))
+	forheight = append(forheight, strconv.FormatFloat(m.eachHeight.quorumPrevoteDelay, 'f', -1, 64))
 
 	// full delay
-	forheight = append(forheight, strconv.FormatFloat(m.fullPrevoteDelay, 'f', -1, 64))
+	forheight = append(forheight, strconv.FormatFloat(m.eachHeight.fullPrevoteDelay, 'f', -1, 64))
 
 	// ProposalReceiveCount,
-	forheight = append(forheight, strconv.Itoa(m.proposalReceiveCount))
+	forheight = append(forheight, strconv.Itoa(m.eachHeight.proposalReceiveCount))
 
 	// proposalCreateCount,
-	forheight = append(forheight, strconv.Itoa(int(m.proposalCreateCount)))
+	forheight = append(forheight, strconv.Itoa(int(m.eachHeight.proposalCreateCount)))
 
 	return forheight
 }
@@ -390,17 +393,18 @@ func (m metricsCache) StringForP2PStep() [][]string {
 	return forStep
 }
 
-func (m *MetricsThreshold) MarkStepTimes(s cstypes.RoundStepType, height int64, roundID uint32) {
+func (m *MetricsThreshold) MarkStepTimes(s cstypes.RoundStepType, roundID uint32) {
 	if !m.stepStart.IsZero() {
 		stepT := time.Since(m.stepStart).Seconds()
 		stepN := strings.TrimPrefix(s.String(), "RoundStep")
-		m.metricsCache.eachTime = append(m.metricsCache.eachTime, stepTime{height: height, roundId: roundID, stepName: stepN, stepTime: stepT})
+		m.metricsCache.eachTime = append(m.metricsCache.eachTime, stepTime{height: m.metricsCache.height, roundId: roundID, stepName: stepN, stepTime: stepT})
 	}
 
 	m.stepStart = time.Now()
 }
 
-func (m *MetricsThreshold) handleSaveNewStep(height int64, roundId int64, step string) {
+func (m *MetricsThreshold) handleSaveNewStep(roundId int64, step string) {
+	height := m.metricsCache.height
 	step = strings.TrimPrefix(step, "RoundStep")
 	m.metricsCache.eachProposal = append(m.metricsCache.eachProposal, stepProposal{
 		height:             height,
