@@ -520,6 +520,8 @@ func (cs *State) updateHeight(height int64) {
 	// if timeout
 	if time.Since(metricTimeOut.timeOldHeight) >= metricTimeOut.timeThreshold {
 		metricTimeOut.WriteToFileCSV()
+		fmt.Println(metricTimeOut.metricsCache.eachHeight.height)
+		fmt.Println(metricTimeOut.metricsCache.eachTime[0].height)
 	}
 	// resets cache
 	p2p.ResetCacheMetrics()
