@@ -24,7 +24,7 @@ var (
 )
 
 func init() {
-	metricTimeOut.NopMetricsThreshold()
+	metricTimeOut.metricsCache = NopCacheMetricsCache()
 	metricTimeOut.timeThreshold = 0 * time.Second
 
 	home, _ := os.UserHomeDir()
@@ -61,10 +61,6 @@ func init() {
 		pathBlockOnlyTimeStep = metricspath + "/blockOnlyTimeStep.csv"
 		pathBlockP2P = metricspath + "/blockP2P.csv"
 	}
-}
-
-func (m *MetricsThreshold) NopMetricsThreshold() {
-	m.metricsCache = NopCacheMetricsCache()
 }
 
 // Metrics contains metrics exposed by this package.
