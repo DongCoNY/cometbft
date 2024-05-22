@@ -1796,7 +1796,7 @@ func (cs *State) pruneBlocks(retainHeight int64) (uint64, error) {
 func (cs *State) recordMetrics(height int64, block *types.Block) {
 	cs.metrics.Validators.Set(float64(cs.Validators.Size()))
 	cs.metrics.ValidatorsPower.Set(float64(cs.Validators.TotalVotingPower()))
-	metricTimeOut.metricsCache.validatorsPowerTemporary = cs.Validators.TotalVotingPower()
+	// metricTimeOut.metricsCache.validatorsPowerTemporary = cs.Validators.TotalVotingPower()
 
 	var (
 		missingValidators      int
