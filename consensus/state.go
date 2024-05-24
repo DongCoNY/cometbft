@@ -519,8 +519,16 @@ func (cs *State) updateHeight(height int64) {
 
 	// if timeout
 	if time.Since(metricTimeOut.timeOldHeight) >= metricTimeOut.timeThreshold {
-		a := time.Since(metricTimeOut.timeOldHeight)
-		metricTimeOut.metricsCache.eachHeight.blockIntervalSeconds = a.Seconds()
+		if metricTimeOut.metricsCache.eachTime[0].stepTime > 1 {
+			a := float64(0)
+			for _, timeStep := range metricTimeOut.metricsCache.eachTime {
+				a += timeStep.stepTime
+			}
+			metricTimeOut.metricsCache.eachHeight.blockIntervalSeconds += a
+		} else {
+			a := time.Since(metricTimeOut.timeOldHeight)
+			metricTimeOut.metricsCache.eachHeight.blockIntervalSeconds = a.Seconds()
+		}
 		metricTimeOut.WriteToFileCSV()
 	}
 	// resets cache
