@@ -519,7 +519,7 @@ func (cs *State) updateHeight(height int64) {
 
 	// if timeout
 	if time.Since(metricTimeOut.timeOldHeight) >= metricTimeOut.timeThreshold {
-		if len(metricTimeOut.metricsCache.eachTime) == 0 {
+		if len(metricTimeOut.metricsCache.eachTime) > 0 {
 			if metricTimeOut.metricsCache.eachTime[0].stepTime > 1 {
 				a := float64(0)
 				for _, timeStep := range metricTimeOut.metricsCache.eachTime {
