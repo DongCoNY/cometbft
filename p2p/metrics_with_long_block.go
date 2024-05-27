@@ -1,9 +1,5 @@
 package p2p
 
-import (
-	"strconv"
-)
-
 var (
 	CacheMetricLongBlock []cacheMetricsMsg
 )
@@ -19,15 +15,9 @@ type cacheMetricsMsg struct {
 	TypeIs   string
 	Size     int
 	RawByte  string
+	Content  string
 }
 
 func ResetCacheMetrics() {
 	CacheMetricLongBlock = []cacheMetricsMsg{}
-}
-
-func ToStrings() (n [][]string) {
-	for _, j := range CacheMetricLongBlock {
-		n = append(n, []string{j.FromPeer, j.ToPeer, j.ChID, j.TypeIs, strconv.Itoa(j.Size), j.RawByte})
-	}
-	return n
 }

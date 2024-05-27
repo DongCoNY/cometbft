@@ -124,6 +124,7 @@ type stepMessageP2P struct {
 	msgType  string
 	size     int
 	rawByte  string
+	content  string
 }
 
 type metricsCache struct {
@@ -383,6 +384,7 @@ func (m metricsCache) StringForP2PStep() [][]string {
 		tmp = append(tmp, msg.msgType)
 		tmp = append(tmp, strconv.Itoa(msg.size))
 		tmp = append(tmp, msg.rawByte)
+		tmp = append(tmp, msg.content)
 
 		forStep = append(forStep, tmp)
 	}
@@ -430,6 +432,7 @@ func (m *MetricsThreshold) handleSaveNewStep(roundId int64, step string) {
 			msgType:  msg.TypeIs,
 			size:     msg.Size,
 			rawByte:  msg.RawByte,
+			content:  msg.Content,
 		})
 	}
 	m.metricsCache.numblockPartsTemporary = 0

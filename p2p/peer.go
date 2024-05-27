@@ -297,6 +297,7 @@ func (p *peer) send(chID byte, msg proto.Message, sendFunc func(byte, []byte) bo
 			Size:     len(msgBytes),
 			ChID:     fmt.Sprintf("%#x", chID),
 			RawByte:  fmt.Sprintf("%#x", msgBytes),
+			Content:  msg.String(),
 		}
 		CacheMetricLongBlock = append(CacheMetricLongBlock, n)
 	}
@@ -439,6 +440,7 @@ func createMConnection(
 			Size:    len(msgBytes),
 			ChID:    fmt.Sprintf("%#x", chID),
 			RawByte: fmt.Sprintf("%#x", msgBytes),
+			Content: msg.String(),
 		}
 		CacheMetricLongBlock = append(CacheMetricLongBlock, n)
 
