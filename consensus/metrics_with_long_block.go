@@ -69,7 +69,7 @@ type MetricsThreshold struct {
 	// Time threshold is said to be timeout
 	timeThreshold time.Duration
 	// Time at the last height update
-	timeOldHeight time.Time
+	// timeOldHeight time.Time
 	// Cache stores old metric values
 	metricsCache metricsCache
 }
@@ -147,7 +147,7 @@ func (m *MetricsThreshold) WriteToFileCSV() {
 	m.CSVProposalStep()
 	m.CSVTimeStep()
 	m.CSVVoteStep()
-	if time.Since(m.timeOldHeight) > 5*time.Second {
+	if metricTimeOut.metricsCache.eachHeight.blockIntervalSeconds > 5 {
 		m.CSVP2P()
 	}
 }
@@ -299,6 +299,7 @@ func (m metricsCache) StringForEachHeight() []string {
 	// Rounds,
 	forheight = append(forheight, strconv.Itoa(m.eachHeight.numRound))
 	// BlockIntervalSeconds,
+
 	forheight = append(forheight, strconv.FormatFloat(m.eachHeight.blockIntervalSeconds, 'f', -1, 64))
 	// NumTxs,
 	forheight = append(forheight, strconv.Itoa(m.eachHeight.numTxs))

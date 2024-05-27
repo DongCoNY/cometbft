@@ -518,29 +518,26 @@ func (cs *State) updateHeight(height int64) {
 	cs.Height = height
 
 	// if timeout
-	if time.Since(metricTimeOut.timeOldHeight) >= metricTimeOut.timeThreshold {
-		if len(metricTimeOut.metricsCache.eachTime) > 0 {
-			if metricTimeOut.metricsCache.eachTime[0].stepTime > 1 {
-				a := float64(0)
-				for _, timeStep := range metricTimeOut.metricsCache.eachTime {
-					a += timeStep.stepTime
-				}
-				metricTimeOut.metricsCache.eachHeight.blockIntervalSeconds += a
-			} else {
-				a := time.Since(metricTimeOut.timeOldHeight)
-				metricTimeOut.metricsCache.eachHeight.blockIntervalSeconds = a.Seconds()
+	if len(metricTimeOut.metricsCache.eachTime) > 0 {
+		if metricTimeOut.metricsCache.eachTime[0].stepTime > 1 {
+			a := float64(0)
+			for _, timeStep := range metricTimeOut.metricsCache.eachTime {
+				a += timeStep.stepTime
 			}
-		} else {
-			a := time.Since(metricTimeOut.timeOldHeight)
-			metricTimeOut.metricsCache.eachHeight.blockIntervalSeconds = a.Seconds()
+			metricTimeOut.metricsCache.eachHeight.blockIntervalSeconds = a
+			fmt.Println(metricTimeOut.metricsCache.eachHeight.blockIntervalSeconds)
 		}
+	} else {
+		metricTimeOut.metricsCache.eachHeight.blockIntervalSeconds = 0
+		fmt.Println("llllllllllllllll")
+	}
 
+	if metricTimeOut.metricsCache.eachHeight.blockIntervalSeconds > metricTimeOut.timeThreshold.Seconds() {
 		metricTimeOut.WriteToFileCSV()
 	}
 	// resets cache
 	p2p.ResetCacheMetrics()
 	metricTimeOut.ResetCache()
-	metricTimeOut.timeOldHeight = time.Now()
 	metricTimeOut.metricsCache.height = height
 }
 
