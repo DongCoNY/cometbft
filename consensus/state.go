@@ -538,7 +538,7 @@ func (cs *State) updateRoundStep(round int32, step cstypes.RoundStepType) {
 		}
 		if cs.Step != step {
 			var missingValidatorsPower int64
-			if cs.LastValidators.Validators != nil {
+			if len(cs.LastValidators.Validators) == 0 {
 				for i, val := range cs.LastValidators.Validators {
 					commitSig := cs.ProposalBlock.LastCommit.Signatures[i]
 					if commitSig.Absent() {
