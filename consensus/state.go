@@ -537,16 +537,6 @@ func (cs *State) updateRoundStep(round int32, step cstypes.RoundStepType) {
 			metricTimeOut.metricsCache.eachHeight.numRound += 1
 		}
 		if cs.Step != step {
-			if cs.Height > cs.state.InitialHeight {
-				var missingValidatorsPower int64
-				for i, val := range cs.LastValidators.Validators {
-					commitSig := cs.ProposalBlock.LastCommit.Signatures[i]
-					if commitSig.Absent() {
-						missingValidatorsPower += val.VotingPower
-					}
-				}
-				metricTimeOut.metricsCache.missingValidatorsPowerPrevoteTemporary = missingValidatorsPower
-			}
 
 			cs.metrics.MarkStep(cs.Step)
 			metricTimeOut.MarkStepTimes(step, uint32(round))
@@ -1519,6 +1509,19 @@ func (cs *State) enterPrecommit(height int64, round int32) {
 	}
 
 	cs.signAddVote(cmtproto.PrecommitType, nil, types.PartSetHeader{})
+
+	if height > cs.state.InitialHeight {
+		if cs.Height > cs.state.InitialHeight {
+			var missingValidatorsPower int64
+			for i, val := range cs.LastValidators.Validators {
+				commitSig := cs.ProposalBlock.LastCommit.Signatures[i]
+				if commitSig.Absent() {
+					missingValidatorsPower += val.VotingPower
+				}
+			}
+			metricTimeOut.metricsCache.missingValidatorsPowerPrevoteTemporary = missingValidatorsPower
+		}
+	}
 }
 
 // Enter: any +2/3 precommits for next round.
