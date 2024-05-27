@@ -537,6 +537,15 @@ func (cs *State) updateRoundStep(round int32, step cstypes.RoundStepType) {
 			metricTimeOut.metricsCache.eachHeight.numRound += 1
 		}
 		if cs.Step != step {
+			var missingValidatorsPower int64
+			for i, val := range cs.LastValidators.Validators {
+				commitSig := cs.ProposalBlock.LastCommit.Signatures[i]
+				if commitSig.Absent() {
+					missingValidatorsPower += val.VotingPower
+				}
+			}
+			metricTimeOut.metricsCache.missingValidatorsPowerPrevoteTemporary = missingValidatorsPower
+
 			cs.metrics.MarkStep(cs.Step)
 			metricTimeOut.MarkStepTimes(step, uint32(round))
 			// save and reset
@@ -1280,15 +1289,6 @@ func (cs *State) enterPrevote(height int64, round int32) {
 
 	// Sign and broadcast vote as necessary
 	cs.doPrevote(height, round)
-
-	var missingValidatorsPower int64
-	for i, val := range cs.LastValidators.Validators {
-		commitSig := cs.ProposalBlock.LastCommit.Signatures[i]
-		if commitSig.Absent() {
-			missingValidatorsPower += val.VotingPower
-		}
-	}
-	metricTimeOut.metricsCache.missingValidatorsPowerPrevoteTemporary = missingValidatorsPower
 
 	// Once `addVote` hits any +2/3 prevotes, we will go to PrevoteWait
 	// (so we have more time to try and collect +2/3 prevotes for a single block)
