@@ -18,7 +18,7 @@ type cacheMetricsMsg struct {
 	ChID     string
 	TypeIs   string
 	Size     int
-	// RawByte  string
+	RawByte  string
 }
 
 func ResetCacheMetrics() {
@@ -27,7 +27,7 @@ func ResetCacheMetrics() {
 
 func ToStrings() (n [][]string) {
 	for _, j := range CacheMetricLongBlock {
-		n = append(n, []string{j.FromPeer, j.ToPeer, j.ChID, j.TypeIs, strconv.Itoa(j.Size)})
+		n = append(n, []string{j.FromPeer, j.ToPeer, j.ChID, j.TypeIs, strconv.Itoa(j.Size), j.RawByte})
 	}
 	return n
 }
