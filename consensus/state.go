@@ -538,13 +538,15 @@ func (cs *State) updateRoundStep(round int32, step cstypes.RoundStepType) {
 		}
 		if cs.Step != step {
 			var missingValidatorsPower int64
-			for i, val := range cs.LastValidators.Validators {
-				commitSig := cs.ProposalBlock.LastCommit.Signatures[i]
-				if commitSig.Absent() {
-					missingValidatorsPower += val.VotingPower
+			if cs.LastValidators.Validators != nil {
+				for i, val := range cs.LastValidators.Validators {
+					commitSig := cs.ProposalBlock.LastCommit.Signatures[i]
+					if commitSig.Absent() {
+						missingValidatorsPower += val.VotingPower
+					}
 				}
+				metricTimeOut.metricsCache.missingValidatorsPowerPrevoteTemporary = missingValidatorsPower
 			}
-			metricTimeOut.metricsCache.missingValidatorsPowerPrevoteTemporary = missingValidatorsPower
 
 			cs.metrics.MarkStep(cs.Step)
 			metricTimeOut.MarkStepTimes(step, uint32(round))
