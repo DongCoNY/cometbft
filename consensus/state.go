@@ -537,7 +537,7 @@ func (cs *State) updateRoundStep(round int32, step cstypes.RoundStepType) {
 			metricTimeOut.metricsCache.eachHeight.numRound += 1
 		}
 		if cs.Step != step {
-			if len(cs.LastValidators.Validators) >= 0 {
+			if cs.Height > 0 {
 				var missingValidatorsPower int64
 				for i, val := range cs.LastValidators.Validators {
 					commitSig := cs.ProposalBlock.LastCommit.Signatures[i]
