@@ -1956,15 +1956,15 @@ func (cs *State) addProposalBlockPart(msg *BlockPartMessage, peerID p2p.ID) (add
 	}
 
 	added, err = cs.ProposalBlockParts.AddPart(part)
-	if added {
-		metricTimeOut.metricsCache.blockPartsReceivedTemporary += 1
-	}
 
 	if err != nil {
 		if errors.Is(err, types.ErrPartSetInvalidProof) || errors.Is(err, types.ErrPartSetUnexpectedIndex) {
 			cs.metrics.BlockGossipPartsReceived.With("matches_current", "false").Add(1)
 		}
 		return added, err
+	}
+	if added {
+		metricTimeOut.metricsCache.blockPartsReceivedTemporary += 1
 	}
 
 	cs.metrics.BlockGossipPartsReceived.With("matches_current", "true").Add(1)
