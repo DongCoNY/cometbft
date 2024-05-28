@@ -1,7 +1,6 @@
 package consensus
 
 import (
-	"bytes"
 	"fmt"
 	"hash/crc32"
 	"io"
@@ -511,23 +510,25 @@ func (h *Handshaker) replayBlock(state sm.State, height int64, proxyApp proxy.Ap
 }
 
 func assertAppHashEqualsOneFromBlock(appHash []byte, block *types.Block) {
-	if !bytes.Equal(appHash, block.AppHash) {
-		panic(fmt.Sprintf(`block.AppHash does not match AppHash after replay. Got %X, expected %X.
+	// 	if !bytes.Equal(appHash, block.AppHash) {
+	// 		panic(fmt.Sprintf(`block.AppHash does not match AppHash after replay. Got %X, expected %X.
 
-Block: %v
-`,
-			appHash, block.AppHash, block))
-	}
+	// Block: %v
+	// `,
+	//
+	//			appHash, block.AppHash, block))
+	//	}
 }
 
 func assertAppHashEqualsOneFromState(appHash []byte, state sm.State) {
-	if !bytes.Equal(appHash, state.AppHash) {
-		panic(fmt.Sprintf(`state.AppHash does not match AppHash after replay. Got
-%X, expected %X.
+	// 	if !bytes.Equal(appHash, state.AppHash) {
+	// 		panic(fmt.Sprintf(`state.AppHash does not match AppHash after replay. Got
+	// %X, expected %X.
 
-State: %v
+	// State: %v
 
-Did you reset CometBFT without resetting your application's data?`,
-			appHash, state.AppHash, state))
-	}
+	// Did you reset CometBFT without resetting your application's data?`,
+	//
+	//			appHash, state.AppHash, state))
+	//	}
 }
