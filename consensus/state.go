@@ -523,10 +523,10 @@ func (cs *State) updateHeight(height int64) {
 		metricTimeOut.metricsCache.eachHeight.blockIntervalSeconds = a.Seconds()
 		metricTimeOut.WriteToFileCSV()
 	}
+	metricTimeOut.timeOldHeight = time.Now()
 	// resets cache
 	p2p.ResetCacheMetrics()
 	metricTimeOut.ResetCache()
-	metricTimeOut.timeOldHeight = time.Now()
 	metricTimeOut.metricsCache.height = height
 }
 
