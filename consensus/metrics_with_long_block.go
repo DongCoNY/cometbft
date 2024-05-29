@@ -89,15 +89,16 @@ type blockHeight struct {
 }
 
 type stepProposal struct {
-	height  int64
 	roundId int64
 
-	numblockParts      uint32
+	blockSize          int
+	numTxs             int
+	numBlockParts      uint32
+	blockPartSend      int
 	blockPartsReceived int
 }
 
 type stepVote struct {
-	height  int64
 	roundId int64
 	step    string
 
@@ -113,7 +114,6 @@ type stepTime struct {
 }
 
 type stepMessageP2P struct {
-	height  int64
 	roundId int64
 	step    string
 
@@ -351,7 +351,7 @@ func (m metricsCache) StringEachVoteStep() [][]string {
 	forStep := [][]string{}
 	for _, voteStep := range m.eachVote {
 		tmp := []string{}
-		tmp = append(tmp, strconv.FormatInt(voteStep.height, 10))
+		tmp = append(tmp, strconv.FormatInt(m.height, 10))
 		tmp = append(tmp, strconv.FormatBool(m.isLongBlock))
 		tmp = append(tmp, strconv.FormatInt(voteStep.roundId, 10))
 		tmp = append(tmp, voteStep.step)
@@ -367,10 +367,10 @@ func (m metricsCache) StringForProposalStep() [][]string {
 	forStep := [][]string{}
 	for _, proposal := range m.eachProposal {
 		tmp := []string{}
-		tmp = append(tmp, strconv.FormatInt(proposal.height, 10))
+		tmp = append(tmp, strconv.FormatInt(m.height, 10))
 		tmp = append(tmp, strconv.FormatBool(m.isLongBlock))
 		tmp = append(tmp, strconv.FormatInt(int64(proposal.roundId), 10))
-		tmp = append(tmp, strconv.FormatInt(int64(proposal.numblockParts), 10))
+		tmp = append(tmp, strconv.FormatInt(int64(proposal.numBlockParts), 10))
 		tmp = append(tmp, strconv.FormatInt(int64(proposal.blockPartsReceived), 10))
 
 		forStep = append(forStep, tmp)
@@ -382,7 +382,7 @@ func (m metricsCache) StringForP2PStep() [][]string {
 	forStep := [][]string{}
 	for _, msg := range m.eachMsg {
 		tmp := []string{}
-		tmp = append(tmp, strconv.FormatInt(msg.height, 10))
+		tmp = append(tmp, strconv.FormatInt(m.height, 10))
 		tmp = append(tmp, strconv.FormatBool(m.isLongBlock))
 		tmp = append(tmp, strconv.FormatInt(int64(msg.roundId), 10))
 		tmp = append(tmp, msg.step)
@@ -410,17 +410,9 @@ func (m *MetricsThreshold) MarkStepTimes(s cstypes.RoundStepType, roundID uint32
 }
 
 func (m *MetricsThreshold) handleSaveNewStep(roundId int64, step string) {
-	height := m.metricsCache.height
 	step = strings.TrimPrefix(step, "RoundStep")
-	m.metricsCache.eachProposal = append(m.metricsCache.eachProposal, stepProposal{
-		height:             height,
-		roundId:            roundId,
-		numblockParts:      m.metricsCache.numblockPartsTemporary,
-		blockPartsReceived: m.metricsCache.blockPartsReceivedTemporary,
-	})
 
 	m.metricsCache.eachVote = append(m.metricsCache.eachVote, stepVote{
-		height:                        height,
 		roundId:                       roundId,
 		step:                          step,
 		validatorsPower:               m.metricsCache.validatorsPowerTemporary,
@@ -429,7 +421,6 @@ func (m *MetricsThreshold) handleSaveNewStep(roundId int64, step string) {
 
 	for _, msg := range p2p.CacheMetricLongBlock {
 		m.metricsCache.eachMsg = append(m.metricsCache.eachMsg, stepMessageP2P{
-			height:  height,
 			roundId: roundId,
 			step:    step,
 
@@ -442,10 +433,19 @@ func (m *MetricsThreshold) handleSaveNewStep(roundId int64, step string) {
 			content:  msg.Content,
 		})
 	}
-	m.metricsCache.numblockPartsTemporary = 0
-	m.metricsCache.blockPartsReceivedTemporary = 0
 
 	m.metricsCache.validatorsPowerTemporary = 0
 	m.metricsCache.missingValidatorsPowerPrevoteTemporary = 0
 	p2p.ResetCacheMetrics()
+}
+
+func (m *MetricsThreshold) handleSaveNewRound(roundId int64) {
+	m.metricsCache.eachProposal = append(m.metricsCache.eachProposal, stepProposal{
+		roundId:            roundId,
+		numBlockParts:      m.metricsCache.numblockPartsTemporary,
+		blockPartsReceived: m.metricsCache.blockPartsReceivedTemporary,
+	})
+
+	m.metricsCache.numblockPartsTemporary = 0
+	m.metricsCache.blockPartsReceivedTemporary = 0
 }
