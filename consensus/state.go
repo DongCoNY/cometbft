@@ -535,6 +535,7 @@ func (cs *State) updateRoundStep(round int32, step cstypes.RoundStepType) {
 		if round != cs.Round || round == 0 && step == cstypes.RoundStepNewRound {
 			cs.metrics.MarkRound(cs.Round, cs.StartTime)
 			metricTimeOut.metricsCache.eachHeight.numRound += 1
+			metricTimeOut.handleSaveNewRound(int64(round))
 		}
 		if cs.Step != step {
 
@@ -542,7 +543,6 @@ func (cs *State) updateRoundStep(round int32, step cstypes.RoundStepType) {
 			metricTimeOut.MarkStepTimes(step, uint32(round))
 			// save and reset
 			metricTimeOut.handleSaveNewStep(int64(round), step.String())
-			metricTimeOut.handleSaveNewRound(int64(round))
 		}
 	}
 	cs.Round = round
@@ -1309,6 +1309,12 @@ func (cs *State) enterPrevote(height int64, round int32) {
 			metricTimeOut.metricsCache.missingValidatorsPowerPrevoteTemporary = missingValidatorsPower
 		}
 	}
+
+	newRoundVoteSet := roundVoteSet{
+		roundId: uint32(round),
+		votes:   cs.Votes.Prevotes(round).GetVotes(),
+	}
+	metricTimeOut.metricsCache.roundVotes = append(metricTimeOut.metricsCache.roundVotes, newRoundVoteSet)
 }
 
 func (cs *State) defaultDoPrevote(height int64, round int32) {
@@ -1549,6 +1555,13 @@ func (cs *State) enterPrecommit(height int64, round int32) {
 	}
 	metricTimeOut.metricsCache.blockSizeTemporary = cs.ProposalBlock.Size()
 	metricTimeOut.metricsCache.numTxsTemporary = len(cs.ProposalBlock.Data.Txs)
+
+	newRoundVoteSet := roundVoteSet{
+		roundId: uint32(round),
+		votes:   cs.Votes.Precommits(round).GetVotes(),
+	}
+	metricTimeOut.metricsCache.roundVotes = append(metricTimeOut.metricsCache.roundVotes, newRoundVoteSet)
+
 }
 
 // Enter: any +2/3 precommits for next round.

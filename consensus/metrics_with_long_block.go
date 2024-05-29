@@ -12,6 +12,7 @@ import (
 	cstypes "github.com/cometbft/cometbft/consensus/types"
 	cmtos "github.com/cometbft/cometbft/libs/os"
 	"github.com/cometbft/cometbft/p2p"
+	"github.com/cometbft/cometbft/types"
 )
 
 var (
@@ -21,6 +22,7 @@ var (
 	pathBlock             string
 	pathBlockOnlyTimeStep string
 	pathBlockP2P          string
+	pathRoundVoteSet      string
 )
 
 func init() {
@@ -54,12 +56,17 @@ func init() {
 		pathBlockP2P = metricspath + "/blockP2P.csv"
 		file5, _ := os.Create(pathBlockP2P)
 		defer file5.Close()
+
+		pathRoundVoteSet = metricspath + "/RoundVoteSe.csv"
+		file6, _ := os.Create(pathRoundVoteSet)
+		defer file6.Close()
 	} else {
 		pathBlockProposalStep = metricspath + "/blockProposalStep.csv"
 		pathBlockVoteStep = metricspath + "/blockVoteStep.csv"
 		pathBlock = metricspath + "/block.csv"
 		pathBlockOnlyTimeStep = metricspath + "/blockOnlyTimeStep.csv"
 		pathBlockP2P = metricspath + "/blockP2P.csv"
+		pathRoundVoteSet = metricspath + "/RoundVoteSe.csv"
 	}
 }
 
@@ -88,7 +95,7 @@ type blockHeight struct {
 	proposalCreateCount      int64
 }
 
-type stepProposal struct {
+type roundProposal struct {
 	roundId   int64
 	blockSize int
 	numTxs    int
@@ -109,7 +116,6 @@ type stepVote struct {
 }
 
 type stepTime struct {
-	height   int64
 	roundId  uint32
 	stepName string
 	stepTime float64
@@ -128,15 +134,22 @@ type stepMessageP2P struct {
 	content  string
 }
 
+// Prevote và precommit for round
+type roundVoteSet struct {
+	roundId uint32
+	votes   []*types.Vote
+}
+
 type metricsCache struct {
 	height      int64
 	isLongBlock bool
 
 	eachHeight   blockHeight
 	eachTime     []stepTime
-	eachProposal []stepProposal
+	eachProposal []roundProposal
 	eachVote     []stepVote
 	eachMsg      []stepMessageP2P
+	roundVotes   []roundVoteSet
 
 	numVoteSentTemporary                   int
 	numVoteReceivedTemporary               int
@@ -161,6 +174,7 @@ func (m *MetricsThreshold) WriteToFileCSV() {
 	m.CSVProposalStep()
 	m.CSVTimeStep()
 	m.CSVVoteStep()
+	m.CSVRoundVoteSet()
 }
 
 func NopCacheMetricsCache() metricsCache {
@@ -180,9 +194,10 @@ func NopCacheMetricsCache() metricsCache {
 		},
 
 		eachTime:     []stepTime{},
-		eachProposal: []stepProposal{},
+		eachProposal: []roundProposal{},
 		eachVote:     []stepVote{},
 		eachMsg:      []stepMessageP2P{},
+		roundVotes:   []roundVoteSet{},
 
 		validatorsPowerTemporary:               0,
 		missingValidatorsPowerPrevoteTemporary: 0,
@@ -205,7 +220,8 @@ func (m *MetricsThreshold) ResetCache() {
 	m.metricsCache.eachHeight.proposalReceiveCount = 0
 
 	m.metricsCache.eachTime = []stepTime{}
-	m.metricsCache.eachProposal = []stepProposal{}
+	m.metricsCache.roundVotes = []roundVoteSet{}
+	m.metricsCache.eachProposal = []roundProposal{}
 	m.metricsCache.eachVote = []stepVote{}
 	m.metricsCache.eachMsg = []stepMessageP2P{}
 }
@@ -307,6 +323,26 @@ func (m MetricsThreshold) CSVP2P() error {
 	return nil
 }
 
+func (m MetricsThreshold) CSVRoundVoteSet() error {
+	file, err := os.OpenFile(pathRoundVoteSet, os.O_WRONLY|os.O_APPEND, os.ModeAppend)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	for _, j := range m.metricsCache.StringForVoteSet() {
+		err = writer.Write(j)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (m metricsCache) StringForEachHeight() []string {
 	forheight := []string{}
 	// Height,
@@ -348,7 +384,7 @@ func (m metricsCache) StringEachStep() [][]string {
 
 	for _, timeStep := range m.eachTime {
 		tmp := []string{}
-		tmp = append(tmp, strconv.FormatInt(timeStep.height, 10))
+		tmp = append(tmp, strconv.FormatInt(m.height, 10))
 		tmp = append(tmp, strconv.FormatBool(m.isLongBlock))
 		tmp = append(tmp, strconv.FormatInt(int64(timeStep.roundId), 10))
 		tmp = append(tmp, timeStep.stepName)
@@ -416,11 +452,31 @@ func (m metricsCache) StringForP2PStep() [][]string {
 	return forStep
 }
 
+func (m metricsCache) StringForVoteSet() [][]string {
+	forStep := [][]string{}
+
+	for _, round := range m.roundVotes {
+		for _, j := range round.votes {
+			tmp := []string{}
+			tmp = append(tmp, strconv.FormatInt(m.height, 10))
+			tmp = append(tmp, strconv.FormatInt(int64(round.roundId), 10))
+			tmp = append(tmp, j.Type.String())
+			tmp = append(tmp, j.BlockID.String())
+			tmp = append(tmp, j.Timestamp.GoString())
+			tmp = append(tmp, j.ValidatorAddress.String())
+			tmp = append(tmp, strconv.FormatInt(int64(j.ValidatorIndex), 10))
+			tmp = append(tmp, string(j.Signature))
+			forStep = append(forStep, tmp)
+		}
+	}
+	return forStep
+}
+
 func (m *MetricsThreshold) MarkStepTimes(s cstypes.RoundStepType, roundID uint32) {
 	if !m.stepStart.IsZero() {
 		stepT := time.Since(m.stepStart).Seconds()
 		stepN := strings.TrimPrefix(s.String(), "RoundStep")
-		m.metricsCache.eachTime = append(m.metricsCache.eachTime, stepTime{height: m.metricsCache.height, roundId: roundID, stepName: stepN, stepTime: stepT})
+		m.metricsCache.eachTime = append(m.metricsCache.eachTime, stepTime{roundId: roundID, stepName: stepN, stepTime: stepT})
 	}
 
 	m.stepStart = time.Now()
@@ -461,7 +517,7 @@ func (m *MetricsThreshold) handleSaveNewStep(roundId int64, step string) {
 }
 
 func (m *MetricsThreshold) handleSaveNewRound(roundId int64) {
-	m.metricsCache.eachProposal = append(m.metricsCache.eachProposal, stepProposal{
+	m.metricsCache.eachProposal = append(m.metricsCache.eachProposal, roundProposal{
 		roundId:            roundId,
 		blockSize:          m.metricsCache.blockSizeTemporary,
 		numTxs:             m.metricsCache.numTxsTemporary,
