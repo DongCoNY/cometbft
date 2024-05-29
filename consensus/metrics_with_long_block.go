@@ -91,7 +91,6 @@ type blockHeight struct {
 type stepProposal struct {
 	height  int64
 	roundId int64
-	step    string
 
 	numblockParts      uint32
 	blockPartsReceived int
@@ -371,7 +370,6 @@ func (m metricsCache) StringForProposalStep() [][]string {
 		tmp = append(tmp, strconv.FormatInt(proposal.height, 10))
 		tmp = append(tmp, strconv.FormatBool(m.isLongBlock))
 		tmp = append(tmp, strconv.FormatInt(int64(proposal.roundId), 10))
-		tmp = append(tmp, proposal.step)
 		tmp = append(tmp, strconv.FormatInt(int64(proposal.numblockParts), 10))
 		tmp = append(tmp, strconv.FormatInt(int64(proposal.blockPartsReceived), 10))
 
@@ -417,7 +415,6 @@ func (m *MetricsThreshold) handleSaveNewStep(roundId int64, step string) {
 	m.metricsCache.eachProposal = append(m.metricsCache.eachProposal, stepProposal{
 		height:             height,
 		roundId:            roundId,
-		step:               step,
 		numblockParts:      m.metricsCache.numblockPartsTemporary,
 		blockPartsReceived: m.metricsCache.blockPartsReceivedTemporary,
 	})
