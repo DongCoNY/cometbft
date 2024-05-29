@@ -856,6 +856,7 @@ func (cs *State) handleMsg(mi msgInfo) {
 
 		cs.mtx.Lock()
 		if added && cs.ProposalBlockParts.IsComplete() {
+			metricTimeOut.metricsCache.blockPartSendTemporary += 1
 			cs.handleCompleteProposal(msg.Height)
 		}
 		if added {
@@ -1523,6 +1524,8 @@ func (cs *State) enterPrecommit(height int64, round int32) {
 			metricTimeOut.metricsCache.missingValidatorsPowerPrevoteTemporary = missingValidatorsPower
 		}
 	}
+	metricTimeOut.metricsCache.blockSizeTemporary = cs.ProposalBlock.Size()
+	metricTimeOut.metricsCache.numTxsTemporary = len(cs.ProposalBlock.Data.Txs)
 }
 
 // Enter: any +2/3 precommits for next round.

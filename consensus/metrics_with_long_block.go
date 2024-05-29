@@ -89,12 +89,12 @@ type blockHeight struct {
 }
 
 type stepProposal struct {
-	roundId int64
+	roundId   int64
+	blockSize int
+	numTxs    int
 
-	blockSize          int
-	numTxs             int
 	numBlockParts      uint32
-	blockPartSend      int
+	blockPartsSend     int
 	blockPartsReceived int
 }
 
@@ -139,6 +139,9 @@ type metricsCache struct {
 	validatorsPowerTemporary               int64
 	missingValidatorsPowerPrevoteTemporary int64
 
+	blockSizeTemporary          int
+	blockPartSendTemporary      int
+	numTxsTemporary             int
 	numblockPartsTemporary      uint32
 	blockPartsReceivedTemporary int
 }
@@ -370,8 +373,11 @@ func (m metricsCache) StringForProposalStep() [][]string {
 		tmp = append(tmp, strconv.FormatInt(m.height, 10))
 		tmp = append(tmp, strconv.FormatBool(m.isLongBlock))
 		tmp = append(tmp, strconv.FormatInt(int64(proposal.roundId), 10))
-		tmp = append(tmp, strconv.FormatInt(int64(proposal.numBlockParts), 10))
+		tmp = append(tmp, strconv.FormatInt(int64(proposal.blockSize), 10))
+		tmp = append(tmp, strconv.FormatInt(int64(proposal.numTxs), 10))
+		tmp = append(tmp, strconv.FormatInt(int64(proposal.blockPartsSend), 10))
 		tmp = append(tmp, strconv.FormatInt(int64(proposal.blockPartsReceived), 10))
+		tmp = append(tmp, strconv.FormatInt(int64(proposal.numBlockParts), 10))
 
 		forStep = append(forStep, tmp)
 	}
@@ -442,10 +448,16 @@ func (m *MetricsThreshold) handleSaveNewStep(roundId int64, step string) {
 func (m *MetricsThreshold) handleSaveNewRound(roundId int64) {
 	m.metricsCache.eachProposal = append(m.metricsCache.eachProposal, stepProposal{
 		roundId:            roundId,
+		blockSize:          m.metricsCache.blockSizeTemporary,
+		numTxs:             m.metricsCache.numTxsTemporary,
+		blockPartsSend:     m.metricsCache.blockPartSendTemporary,
 		numBlockParts:      m.metricsCache.numblockPartsTemporary,
 		blockPartsReceived: m.metricsCache.blockPartsReceivedTemporary,
 	})
 
+	m.metricsCache.blockSizeTemporary = 0
+	m.metricsCache.blockPartSendTemporary = 0
+	m.metricsCache.numTxsTemporary = 0
 	m.metricsCache.numblockPartsTemporary = 0
 	m.metricsCache.blockPartsReceivedTemporary = 0
 }
