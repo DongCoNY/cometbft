@@ -1286,6 +1286,18 @@ func (cs *State) enterPrevote(height int64, round int32) {
 
 	// Once `addVote` hits any +2/3 prevotes, we will go to PrevoteWait
 	// (so we have more time to try and collect +2/3 prevotes for a single block)
+	if height > cs.state.InitialHeight {
+		if cs.Height > cs.state.InitialHeight {
+			var missingValidatorsPower int64
+			for i, val := range cs.LastValidators.Validators {
+				commitSig := cs.ProposalBlock.LastCommit.Signatures[i]
+				if commitSig.Absent() {
+					missingValidatorsPower += val.VotingPower
+				}
+			}
+			metricTimeOut.metricsCache.missingValidatorsPowerPrevoteTemporary = missingValidatorsPower
+		}
+	}
 }
 
 func (cs *State) defaultDoPrevote(height int64, round int32) {
