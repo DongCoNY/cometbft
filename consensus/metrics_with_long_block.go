@@ -124,10 +124,12 @@ type stepMessageP2P struct {
 	msgType  string
 	size     int
 	rawByte  string
+	content  string
 }
 
 type metricsCache struct {
-	height int64
+	height      int64
+	isLongBlock bool
 
 	eachHeight   blockHeight
 	eachTime     []stepTime
@@ -143,13 +145,16 @@ type metricsCache struct {
 }
 
 func (m *MetricsThreshold) WriteToFileCSV() {
+	if time.Since(m.timeOldHeight) > 5*time.Second {
+		m.metricsCache.isLongBlock = true
+		m.CSVP2P()
+	} else {
+		m.metricsCache.isLongBlock = false
+	}
 	m.CSVEachHeight()
 	m.CSVProposalStep()
 	m.CSVTimeStep()
 	m.CSVVoteStep()
-	if time.Since(m.timeOldHeight) > 5*time.Second {
-		m.CSVP2P()
-	}
 }
 
 func NopCacheMetricsCache() metricsCache {
@@ -296,6 +301,8 @@ func (m metricsCache) StringForEachHeight() []string {
 	// Height,
 	m.eachHeight.height = m.height
 	forheight = append(forheight, strconv.FormatInt(m.eachHeight.height, 10))
+	// islongblock
+	forheight = append(forheight, strconv.FormatBool(m.isLongBlock))
 	// Rounds,
 	forheight = append(forheight, strconv.Itoa(m.eachHeight.numRound))
 	// BlockIntervalSeconds,
@@ -331,6 +338,7 @@ func (m metricsCache) StringEachStep() [][]string {
 	for _, timeStep := range m.eachTime {
 		tmp := []string{}
 		tmp = append(tmp, strconv.FormatInt(timeStep.height, 10))
+		tmp = append(tmp, strconv.FormatBool(m.isLongBlock))
 		tmp = append(tmp, strconv.FormatInt(int64(timeStep.roundId), 10))
 		tmp = append(tmp, timeStep.stepName)
 		tmp = append(tmp, strconv.FormatFloat(timeStep.stepTime, 'f', -1, 64))
@@ -345,6 +353,7 @@ func (m metricsCache) StringEachVoteStep() [][]string {
 	for _, voteStep := range m.eachVote {
 		tmp := []string{}
 		tmp = append(tmp, strconv.FormatInt(voteStep.height, 10))
+		tmp = append(tmp, strconv.FormatBool(m.isLongBlock))
 		tmp = append(tmp, strconv.FormatInt(voteStep.roundId, 10))
 		tmp = append(tmp, voteStep.step)
 		tmp = append(tmp, strconv.FormatInt(voteStep.validatorsPower, 10))
@@ -360,6 +369,7 @@ func (m metricsCache) StringForProposalStep() [][]string {
 	for _, proposal := range m.eachProposal {
 		tmp := []string{}
 		tmp = append(tmp, strconv.FormatInt(proposal.height, 10))
+		tmp = append(tmp, strconv.FormatBool(m.isLongBlock))
 		tmp = append(tmp, strconv.FormatInt(int64(proposal.roundId), 10))
 		tmp = append(tmp, proposal.step)
 		tmp = append(tmp, strconv.FormatInt(int64(proposal.numblockParts), 10))
@@ -375,6 +385,7 @@ func (m metricsCache) StringForP2PStep() [][]string {
 	for _, msg := range m.eachMsg {
 		tmp := []string{}
 		tmp = append(tmp, strconv.FormatInt(msg.height, 10))
+		tmp = append(tmp, strconv.FormatBool(m.isLongBlock))
 		tmp = append(tmp, strconv.FormatInt(int64(msg.roundId), 10))
 		tmp = append(tmp, msg.step)
 		tmp = append(tmp, msg.fromPeer)
@@ -383,6 +394,7 @@ func (m metricsCache) StringForP2PStep() [][]string {
 		tmp = append(tmp, msg.msgType)
 		tmp = append(tmp, strconv.Itoa(msg.size))
 		tmp = append(tmp, msg.rawByte)
+		tmp = append(tmp, msg.content)
 
 		forStep = append(forStep, tmp)
 	}
@@ -429,7 +441,8 @@ func (m *MetricsThreshold) handleSaveNewStep(roundId int64, step string) {
 			chID:     msg.ChID,
 			msgType:  msg.TypeIs,
 			size:     msg.Size,
-			// rawByte:  msg.RawByte,
+			rawByte:  msg.RawByte,
+			content:  msg.Content,
 		})
 	}
 	m.metricsCache.numblockPartsTemporary = 0

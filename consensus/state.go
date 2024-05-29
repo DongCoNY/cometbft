@@ -523,10 +523,10 @@ func (cs *State) updateHeight(height int64) {
 		metricTimeOut.metricsCache.eachHeight.blockIntervalSeconds = a.Seconds()
 		metricTimeOut.WriteToFileCSV()
 	}
+	metricTimeOut.timeOldHeight = time.Now()
 	// resets cache
 	p2p.ResetCacheMetrics()
 	metricTimeOut.ResetCache()
-	metricTimeOut.timeOldHeight = time.Now()
 	metricTimeOut.metricsCache.height = height
 }
 
@@ -537,6 +537,7 @@ func (cs *State) updateRoundStep(round int32, step cstypes.RoundStepType) {
 			metricTimeOut.metricsCache.eachHeight.numRound += 1
 		}
 		if cs.Step != step {
+
 			cs.metrics.MarkStep(cs.Step)
 			metricTimeOut.MarkStepTimes(step, uint32(round))
 			// save and reset
@@ -1281,15 +1282,6 @@ func (cs *State) enterPrevote(height int64, round int32) {
 	// Sign and broadcast vote as necessary
 	cs.doPrevote(height, round)
 
-	// var missingValidatorsPower int64
-	// for i, val := range cs.LastValidators.Validators {
-	// 	commitSig := cs.ProposalBlock.LastCommit.Signatures[i]
-	// 	if commitSig.Absent() {
-	// 		missingValidatorsPower += val.VotingPower
-	// 	}
-	// }
-	// metricTimeOut.metricsCache.missingValidatorsPowerPrevoteTemporary = missingValidatorsPower
-
 	// Once `addVote` hits any +2/3 prevotes, we will go to PrevoteWait
 	// (so we have more time to try and collect +2/3 prevotes for a single block)
 }
@@ -1517,6 +1509,19 @@ func (cs *State) enterPrecommit(height int64, round int32) {
 	}
 
 	cs.signAddVote(cmtproto.PrecommitType, nil, types.PartSetHeader{})
+
+	if height > cs.state.InitialHeight {
+		if cs.Height > cs.state.InitialHeight {
+			var missingValidatorsPower int64
+			for i, val := range cs.LastValidators.Validators {
+				commitSig := cs.ProposalBlock.LastCommit.Signatures[i]
+				if commitSig.Absent() {
+					missingValidatorsPower += val.VotingPower
+				}
+			}
+			metricTimeOut.metricsCache.missingValidatorsPowerPrevoteTemporary = missingValidatorsPower
+		}
+	}
 }
 
 // Enter: any +2/3 precommits for next round.
@@ -1956,15 +1961,15 @@ func (cs *State) addProposalBlockPart(msg *BlockPartMessage, peerID p2p.ID) (add
 	}
 
 	added, err = cs.ProposalBlockParts.AddPart(part)
-	if added {
-		metricTimeOut.metricsCache.blockPartsReceivedTemporary += 1
-	}
-
 	if err != nil {
 		if errors.Is(err, types.ErrPartSetInvalidProof) || errors.Is(err, types.ErrPartSetUnexpectedIndex) {
 			cs.metrics.BlockGossipPartsReceived.With("matches_current", "false").Add(1)
 		}
 		return added, err
+	}
+
+	if added {
+		metricTimeOut.metricsCache.blockPartsReceivedTemporary += 1
 	}
 
 	cs.metrics.BlockGossipPartsReceived.With("matches_current", "true").Add(1)

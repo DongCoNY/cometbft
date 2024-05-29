@@ -296,7 +296,8 @@ func (p *peer) send(chID byte, msg proto.Message, sendFunc func(byte, []byte) bo
 			TypeIs:   metricLabelValue,
 			Size:     len(msgBytes),
 			ChID:     fmt.Sprintf("%#x", chID),
-			// RawByte:  fmt.Sprintf("%#x", msgBytes),
+			RawByte:  fmt.Sprintf("%#x", msgBytes),
+			Content:  msg.String(),
 		}
 		CacheMetricLongBlock = append(CacheMetricLongBlock, n)
 	}
@@ -434,11 +435,12 @@ func createMConnection(
 
 		metricLabelValue := p.mlc.ValueToMetricLabel(msg)
 		n := cacheMetricsMsg{
-			ToPeer: string(p.ID()),
-			TypeIs: metricLabelValue,
-			Size:   len(msgBytes),
-			ChID:   fmt.Sprintf("%#x", chID),
-			// RawByte: fmt.Sprintf("%#x", msgBytes),
+			ToPeer:  string(p.ID()),
+			TypeIs:  metricLabelValue,
+			Size:    len(msgBytes),
+			ChID:    fmt.Sprintf("%#x", chID),
+			RawByte: fmt.Sprintf("%#x", msgBytes),
+			Content: msg.String(),
 		}
 		CacheMetricLongBlock = append(CacheMetricLongBlock, n)
 
