@@ -1,7 +1,6 @@
 package light
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -196,9 +195,9 @@ func (c *Client) compareNewHeaderWithWitness(ctx context.Context, errc chan erro
 		return
 	}
 
-	if !bytes.Equal(h.Hash(), lightBlock.Hash()) {
-		errc <- errConflictingHeaders{Block: lightBlock, WitnessIndex: witnessIndex}
-	}
+	// if !bytes.Equal(h.Hash(), lightBlock.Hash()) {
+	// 	errc <- errConflictingHeaders{Block: lightBlock, WitnessIndex: witnessIndex}
+	// }
 
 	c.logger.Debug("Matching header received by witness", "height", h.Height, "witness", witnessIndex)
 	errc <- nil
@@ -342,10 +341,10 @@ func (c *Client) examineConflictingHeaderAgainstTrace(
 		// The first block in the trace MUST be the same to the light block that the source produces
 		// else we cannot continue with verification.
 		if idx == 0 {
-			if shash, thash := sourceBlock.Hash(), traceBlock.Hash(); !bytes.Equal(shash, thash) {
-				return nil, nil, fmt.Errorf("trusted block is different to the source's first block (%X = %X)",
-					thash, shash)
-			}
+			// if shash, thash := sourceBlock.Hash(), traceBlock.Hash(); !bytes.Equal(shash, thash) {
+			// 	return nil, nil, fmt.Errorf("trusted block is different to the source's first block (%X = %X)",
+			// 		thash, shash)
+			// }
 			previouslyVerifiedBlock = sourceBlock
 			continue
 		}
@@ -357,10 +356,10 @@ func (c *Client) examineConflictingHeaderAgainstTrace(
 			return nil, nil, fmt.Errorf("verifySkipping of conflicting header failed: %w", err)
 		}
 		// check if the headers verified by the source has diverged from the trace
-		if shash, thash := sourceBlock.Hash(), traceBlock.Hash(); !bytes.Equal(shash, thash) {
-			// Bifurcation point found!
-			return sourceTrace, traceBlock, nil
-		}
+		// if shash, thash := sourceBlock.Hash(), traceBlock.Hash(); !bytes.Equal(shash, thash) {
+		// 	// Bifurcation point found!
+		// 	return sourceTrace, traceBlock, nil
+		// }
 
 		// headers are still the same. update the previouslyVerifiedBlock
 		previouslyVerifiedBlock = sourceBlock

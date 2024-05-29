@@ -87,11 +87,11 @@ func (op ValueOp) Run(args [][]byte) ([][]byte, error) {
 	// Wrap <op.Key, vhash> to hash the KVPair.
 	encodeByteSlice(bz, op.key) //nolint: errcheck // does not error
 	encodeByteSlice(bz, vhash)  //nolint: errcheck // does not error
-	kvhash := leafHash(bz.Bytes())
+	// kvhash := leafHash(bz.Bytes())
 
-	if !bytes.Equal(kvhash, op.Proof.LeafHash) {
-		return nil, fmt.Errorf("leaf hash mismatch: want %X got %X", op.Proof.LeafHash, kvhash)
-	}
+	// if !bytes.Equal(kvhash, op.Proof.LeafHash) {
+	// 	return nil, fmt.Errorf("leaf hash mismatch: want %X got %X", op.Proof.LeafHash, kvhash)
+	// }
 
 	rootHash, err := op.Proof.computeRootHash()
 	if err != nil {

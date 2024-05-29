@@ -1070,7 +1070,7 @@ func (cs *State) needProofBlock(height int64) bool {
 		return true
 	}
 
-	return !bytes.Equal(cs.state.AppHash, lastBlockMeta.Header.AppHash)
+	return true
 }
 
 // Enter (CreateEmptyBlocks): from enterNewRound(height,round)

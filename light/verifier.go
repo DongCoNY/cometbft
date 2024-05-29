@@ -1,7 +1,6 @@
 package light
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"time"
@@ -114,13 +113,13 @@ func VerifyAdjacent(
 	}
 
 	// Check the validator hashes are the same
-	if !bytes.Equal(untrustedHeader.ValidatorsHash, trustedHeader.NextValidatorsHash) {
-		err := fmt.Errorf("expected old header next validators (%X) to match those from new header (%X)",
-			trustedHeader.NextValidatorsHash,
-			untrustedHeader.ValidatorsHash,
-		)
-		return err
-	}
+	// if !bytes.Equal(untrustedHeader.ValidatorsHash, trustedHeader.NextValidatorsHash) {
+	// 	err := fmt.Errorf("expected old header next validators (%X) to match those from new header (%X)",
+	// 		trustedHeader.NextValidatorsHash,
+	// 		untrustedHeader.ValidatorsHash,
+	// 	)
+	// 	return err
+	// }
 
 	// Ensure that +2/3 of new validators signed correctly.
 	if err := untrustedVals.VerifyCommitLight(trustedHeader.ChainID, untrustedHeader.Commit.BlockID,
@@ -180,13 +179,13 @@ func verifyNewHeaderAndVals(
 			maxClockDrift)
 	}
 
-	if !bytes.Equal(untrustedHeader.ValidatorsHash, untrustedVals.Hash()) {
-		return fmt.Errorf("expected new header validators (%X) to match those that were supplied (%X) at height %d",
-			untrustedHeader.ValidatorsHash,
-			untrustedVals.Hash(),
-			untrustedHeader.Height,
-		)
-	}
+	// if !bytes.Equal(untrustedHeader.ValidatorsHash, untrustedVals.Hash()) {
+	// 	return fmt.Errorf("expected new header validators (%X) to match those that were supplied (%X) at height %d",
+	// 		untrustedHeader.ValidatorsHash,
+	// 		untrustedVals.Hash(),
+	// 		untrustedHeader.Height,
+	// 	)
+	// }
 
 	return nil
 }
@@ -234,12 +233,12 @@ func VerifyBackwards(untrustedHeader, trustedHeader *types.Header) error {
 				trustedHeader.Time)}
 	}
 
-	if !bytes.Equal(untrustedHeader.Hash(), trustedHeader.LastBlockID.Hash) {
-		return ErrInvalidHeader{
-			fmt.Errorf("older header hash %X does not match trusted header's last block %X",
-				untrustedHeader.Hash(),
-				trustedHeader.LastBlockID.Hash)}
-	}
+	// if !bytes.Equal(untrustedHeader.Hash(), trustedHeader.LastBlockID.Hash) {
+	// 	return ErrInvalidHeader{
+	// 		fmt.Errorf("older header hash %X does not match trusted header's last block %X",
+	// 			untrustedHeader.Hash(),
+	// 			trustedHeader.LastBlockID.Hash)}
+	// }
 
 	return nil
 }

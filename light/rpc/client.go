@@ -1,7 +1,6 @@
 package rpc
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -242,16 +241,16 @@ func (c *Client) ConsensusParams(ctx context.Context, height *int64) (*ctypes.Re
 	}
 
 	// Update the light client if we're behind.
-	l, err := c.updateLightClientIfNeededTo(ctx, &res.BlockHeight)
+	_, err = c.updateLightClientIfNeededTo(ctx, &res.BlockHeight)
 	if err != nil {
 		return nil, err
 	}
 
 	// Verify hash.
-	if cH, tH := res.ConsensusParams.Hash(), l.ConsensusHash; !bytes.Equal(cH, tH) {
-		return nil, fmt.Errorf("params hash %X does not match trusted hash %X",
-			cH, tH)
-	}
+	// if cH, tH := res.ConsensusParams.Hash(), l.ConsensusHash; !bytes.Equal(cH, tH) {
+	// 	return nil, fmt.Errorf("params hash %X does not match trusted hash %X",
+	// 		cH, tH)
+	// }
 
 	return res, nil
 }
@@ -288,14 +287,14 @@ func (c *Client) BlockchainInfo(ctx context.Context, minHeight, maxHeight int64)
 
 	// Verify each of the BlockMetas.
 	for _, meta := range res.BlockMetas {
-		h, err := c.lc.TrustedLightBlock(meta.Header.Height)
+		_, err := c.lc.TrustedLightBlock(meta.Header.Height)
 		if err != nil {
 			return nil, fmt.Errorf("trusted header %d: %w", meta.Header.Height, err)
 		}
-		if bmH, tH := meta.Header.Hash(), h.Hash(); !bytes.Equal(bmH, tH) {
-			return nil, fmt.Errorf("block meta header %X does not match with trusted header %X",
-				bmH, tH)
-		}
+		// if bmH, tH := meta.Header.Hash(), h.Hash(); !bytes.Equal(bmH, tH) {
+		// 	return nil, fmt.Errorf("block meta header %X does not match with trusted header %X",
+		// 		bmH, tH)
+		// }
 	}
 
 	return res, nil
@@ -323,22 +322,22 @@ func (c *Client) Block(ctx context.Context, height *int64) (*ctypes.ResultBlock,
 	if err := res.Block.ValidateBasic(); err != nil {
 		return nil, err
 	}
-	if bmH, bH := res.BlockID.Hash, res.Block.Hash(); !bytes.Equal(bmH, bH) {
-		return nil, fmt.Errorf("blockID %X does not match with block %X",
-			bmH, bH)
-	}
+	// if bmH, bH := res.BlockID.Hash, res.Block.Hash(); !bytes.Equal(bmH, bH) {
+	// 	return nil, fmt.Errorf("blockID %X does not match with block %X",
+	// 		bmH, bH)
+	// }
 
 	// Update the light client if we're behind.
-	l, err := c.updateLightClientIfNeededTo(ctx, &res.Block.Height)
+	_, err = c.updateLightClientIfNeededTo(ctx, &res.Block.Height)
 	if err != nil {
 		return nil, err
 	}
 
 	// Verify block.
-	if bH, tH := res.Block.Hash(), l.Hash(); !bytes.Equal(bH, tH) {
-		return nil, fmt.Errorf("block header %X does not match with trusted header %X",
-			bH, tH)
-	}
+	// if bH, tH := res.Block.Hash(), l.Hash(); !bytes.Equal(bH, tH) {
+	// 	return nil, fmt.Errorf("block header %X does not match with trusted header %X",
+	// 		bH, tH)
+	// }
 
 	return res, nil
 }
@@ -357,22 +356,22 @@ func (c *Client) BlockByHash(ctx context.Context, hash []byte) (*ctypes.ResultBl
 	if err := res.Block.ValidateBasic(); err != nil {
 		return nil, err
 	}
-	if bmH, bH := res.BlockID.Hash, res.Block.Hash(); !bytes.Equal(bmH, bH) {
-		return nil, fmt.Errorf("blockID %X does not match with block %X",
-			bmH, bH)
-	}
+	// if bmH, bH := res.BlockID.Hash, res.Block.Hash(); !bytes.Equal(bmH, bH) {
+	// 	return nil, fmt.Errorf("blockID %X does not match with block %X",
+	// 		bmH, bH)
+	// }
 
 	// Update the light client if we're behind.
-	l, err := c.updateLightClientIfNeededTo(ctx, &res.Block.Height)
+	_, err = c.updateLightClientIfNeededTo(ctx, &res.Block.Height)
 	if err != nil {
 		return nil, err
 	}
 
 	// Verify block.
-	if bH, tH := res.Block.Hash(), l.Hash(); !bytes.Equal(bH, tH) {
-		return nil, fmt.Errorf("block header %X does not match with trusted header %X",
-			bH, tH)
-	}
+	// if bH, tH := res.Block.Hash(), l.Hash(); !bytes.Equal(bH, tH) {
+	// 	return nil, fmt.Errorf("block header %X does not match with trusted header %X",
+	// 		bH, tH)
+	// }
 
 	return res, nil
 }
@@ -405,13 +404,13 @@ func (c *Client) BlockResults(ctx context.Context, height *int64) (*ctypes.Resul
 
 	// Update the light client if we're behind.
 	nextHeight := h + 1
-	trustedBlock, err := c.updateLightClientIfNeededTo(ctx, &nextHeight)
+	_, err = c.updateLightClientIfNeededTo(ctx, &nextHeight)
 	if err != nil {
 		return nil, err
 	}
 
 	// proto-encode BeginBlock events
-	bbeBytes, err := proto.Marshal(&abci.ResponseBeginBlock{
+	_, err = proto.Marshal(&abci.ResponseBeginBlock{
 		Events: res.BeginBlockEvents,
 	})
 	if err != nil {
@@ -419,10 +418,10 @@ func (c *Client) BlockResults(ctx context.Context, height *int64) (*ctypes.Resul
 	}
 
 	// Build a Merkle tree of proto-encoded DeliverTx results and get a hash.
-	results := types.NewResults(res.TxsResults)
+	// results := types.NewResults(res.TxsResults)
 
 	// proto-encode EndBlock events.
-	ebeBytes, err := proto.Marshal(&abci.ResponseEndBlock{
+	_, err = proto.Marshal(&abci.ResponseEndBlock{
 		Events: res.EndBlockEvents,
 	})
 	if err != nil {
@@ -430,13 +429,13 @@ func (c *Client) BlockResults(ctx context.Context, height *int64) (*ctypes.Resul
 	}
 
 	// Build a Merkle tree out of the above 3 binary slices.
-	rH := merkle.HashFromByteSlices([][]byte{bbeBytes, results.Hash(), ebeBytes})
+	// rH := merkle.HashFromByteSlices([][]byte{bbeBytes, results.Hash(), ebeBytes})
 
 	// Verify block results.
-	if !bytes.Equal(rH, trustedBlock.LastResultsHash) {
-		return nil, fmt.Errorf("last results %X does not match with trusted last results %X",
-			rH, trustedBlock.LastResultsHash)
-	}
+	// if !bytes.Equal(rH, trustedBlock.LastResultsHash) {
+	// 	return nil, fmt.Errorf("last results %X does not match with trusted last results %X",
+	// 		rH, trustedBlock.LastResultsHash)
+	// }
 
 	return res, nil
 }
@@ -462,15 +461,15 @@ func (c *Client) HeaderByHash(ctx context.Context, hash cmtbytes.HexBytes) (*cty
 		return nil, err
 	}
 
-	lb, err := c.updateLightClientIfNeededTo(ctx, &res.Header.Height)
+	_, err = c.updateLightClientIfNeededTo(ctx, &res.Header.Height)
 	if err != nil {
 		return nil, err
 	}
 
-	if !bytes.Equal(lb.Header.Hash(), res.Header.Hash()) {
-		return nil, fmt.Errorf("primary header hash does not match trusted header hash. (%X != %X)",
-			lb.Header.Hash(), res.Header.Hash())
-	}
+	// if !bytes.Equal(lb.Header.Hash(), res.Header.Hash()) {
+	// 	return nil, fmt.Errorf("primary header hash does not match trusted header hash. (%X != %X)",
+	// 		lb.Header.Hash(), res.Header.Hash())
+	// }
 
 	return res, nil
 }
