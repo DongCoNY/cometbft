@@ -102,6 +102,8 @@ type stepVote struct {
 	roundId int64
 	step    string
 
+	numVoteReceived               int
+	numVoteSent                   int
 	validatorsPower               int64
 	missingValidatorsPowerPrevote int64
 }
@@ -136,11 +138,13 @@ type metricsCache struct {
 	eachVote     []stepVote
 	eachMsg      []stepMessageP2P
 
+	numVoteSentTemporary                   int
+	numVoteReceivedTemporary               int
 	validatorsPowerTemporary               int64
 	missingValidatorsPowerPrevoteTemporary int64
 
 	blockSizeTemporary          int
-	blockPartSendTemporary      int
+	blockPartsSendTemporary     int
 	numTxsTemporary             int
 	numblockPartsTemporary      uint32
 	blockPartsReceivedTemporary int
@@ -182,7 +186,12 @@ func NopCacheMetricsCache() metricsCache {
 
 		validatorsPowerTemporary:               0,
 		missingValidatorsPowerPrevoteTemporary: 0,
+		numVoteSentTemporary:                   0,
+		numVoteReceivedTemporary:               0,
 
+		numTxsTemporary:             0,
+		blockSizeTemporary:          0,
+		blockPartsSendTemporary:     0,
 		numblockPartsTemporary:      0,
 		blockPartsReceivedTemporary: 0,
 	}
@@ -358,8 +367,10 @@ func (m metricsCache) StringEachVoteStep() [][]string {
 		tmp = append(tmp, strconv.FormatBool(m.isLongBlock))
 		tmp = append(tmp, strconv.FormatInt(voteStep.roundId, 10))
 		tmp = append(tmp, voteStep.step)
-		tmp = append(tmp, strconv.FormatInt(voteStep.validatorsPower, 10))
+		tmp = append(tmp, strconv.FormatInt(int64(voteStep.numVoteReceived), 10))
+		tmp = append(tmp, strconv.FormatInt(int64(voteStep.numVoteSent), 10))
 		tmp = append(tmp, strconv.FormatInt(voteStep.missingValidatorsPowerPrevote, 10))
+		tmp = append(tmp, strconv.FormatInt(voteStep.validatorsPower, 10))
 
 		forStep = append(forStep, tmp)
 	}
@@ -421,6 +432,8 @@ func (m *MetricsThreshold) handleSaveNewStep(roundId int64, step string) {
 	m.metricsCache.eachVote = append(m.metricsCache.eachVote, stepVote{
 		roundId:                       roundId,
 		step:                          step,
+		numVoteReceived:               m.metricsCache.numVoteReceivedTemporary,
+		numVoteSent:                   m.metricsCache.numVoteSentTemporary,
 		validatorsPower:               m.metricsCache.validatorsPowerTemporary,
 		missingValidatorsPowerPrevote: m.metricsCache.missingValidatorsPowerPrevoteTemporary,
 	})
@@ -440,6 +453,8 @@ func (m *MetricsThreshold) handleSaveNewStep(roundId int64, step string) {
 		})
 	}
 
+	m.metricsCache.numVoteReceivedTemporary = 0
+	m.metricsCache.numVoteSentTemporary = 0
 	m.metricsCache.validatorsPowerTemporary = 0
 	m.metricsCache.missingValidatorsPowerPrevoteTemporary = 0
 	p2p.ResetCacheMetrics()
@@ -450,13 +465,13 @@ func (m *MetricsThreshold) handleSaveNewRound(roundId int64) {
 		roundId:            roundId,
 		blockSize:          m.metricsCache.blockSizeTemporary,
 		numTxs:             m.metricsCache.numTxsTemporary,
-		blockPartsSend:     m.metricsCache.blockPartSendTemporary,
+		blockPartsSend:     m.metricsCache.blockPartsSendTemporary,
 		numBlockParts:      m.metricsCache.numblockPartsTemporary,
 		blockPartsReceived: m.metricsCache.blockPartsReceivedTemporary,
 	})
 
 	m.metricsCache.blockSizeTemporary = 0
-	m.metricsCache.blockPartSendTemporary = 0
+	m.metricsCache.blockPartsSendTemporary = 0
 	m.metricsCache.numTxsTemporary = 0
 	m.metricsCache.numblockPartsTemporary = 0
 	m.metricsCache.blockPartsReceivedTemporary = 0

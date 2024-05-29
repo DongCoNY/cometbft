@@ -856,7 +856,12 @@ func (cs *State) handleMsg(mi msgInfo) {
 
 		cs.mtx.Lock()
 		if added && cs.ProposalBlockParts.IsComplete() {
-			metricTimeOut.metricsCache.blockPartSendTemporary += 1
+			if peerID == "" {
+				metricTimeOut.metricsCache.blockPartsSendTemporary += 1
+			} else {
+				metricTimeOut.metricsCache.blockPartsReceivedTemporary += 1
+			}
+
 			cs.handleCompleteProposal(msg.Height)
 		}
 		if added {
@@ -878,6 +883,12 @@ func (cs *State) handleMsg(mi msgInfo) {
 		// if the vote gives us a 2/3-any or 2/3-one, we transition
 		added, err = cs.tryAddVote(msg.Vote, peerID)
 		if added {
+			if peerID == "" {
+				metricTimeOut.metricsCache.numVoteSentTemporary += 1
+			} else {
+				metricTimeOut.metricsCache.numVoteReceivedTemporary += 1
+			}
+
 			cs.statsMsgQueue <- mi
 		}
 
@@ -1984,9 +1995,9 @@ func (cs *State) addProposalBlockPart(msg *BlockPartMessage, peerID p2p.ID) (add
 		return added, err
 	}
 
-	if added {
-		metricTimeOut.metricsCache.blockPartsReceivedTemporary += 1
-	}
+	// if added {
+	// 	metricTimeOut.metricsCache.blockPartsReceivedTemporary += 1
+	// }
 
 	cs.metrics.BlockGossipPartsReceived.With("matches_current", "true").Add(1)
 	metricTimeOut.metricsCache.eachHeight.blockGossipPartsReceived += 1
