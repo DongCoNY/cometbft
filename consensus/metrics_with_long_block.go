@@ -2,6 +2,7 @@ package consensus
 
 import (
 	"encoding/csv"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -57,7 +58,7 @@ func init() {
 		file5, _ := os.Create(pathBlockP2P)
 		defer file5.Close()
 
-		pathRoundVoteSet = metricspath + "/RoundVoteSe.csv"
+		pathRoundVoteSet = metricspath + "/RoundVoteSet.csv"
 		file6, _ := os.Create(pathRoundVoteSet)
 		defer file6.Close()
 	} else {
@@ -66,7 +67,7 @@ func init() {
 		pathBlock = metricspath + "/block.csv"
 		pathBlockOnlyTimeStep = metricspath + "/blockOnlyTimeStep.csv"
 		pathBlockP2P = metricspath + "/blockP2P.csv"
-		pathRoundVoteSet = metricspath + "/RoundVoteSe.csv"
+		pathRoundVoteSet = metricspath + "/RoundVoteSet.csv"
 	}
 }
 
@@ -465,7 +466,7 @@ func (m metricsCache) StringForVoteSet() [][]string {
 			tmp = append(tmp, j.Timestamp.GoString())
 			tmp = append(tmp, j.ValidatorAddress.String())
 			tmp = append(tmp, strconv.FormatInt(int64(j.ValidatorIndex), 10))
-			tmp = append(tmp, string(j.Signature))
+			tmp = append(tmp, fmt.Sprintf("%v", j.Signature))
 			forStep = append(forStep, tmp)
 		}
 	}
