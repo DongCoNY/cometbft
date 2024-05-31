@@ -83,7 +83,6 @@ type MetricsThreshold struct {
 }
 
 type blockHeight struct {
-	height                   int64
 	numRound                 int
 	numTxs                   int
 	blockSizeBytes           int
@@ -182,7 +181,6 @@ func NopCacheMetricsCache() metricsCache {
 	return metricsCache{
 		height: 0,
 		eachHeight: blockHeight{
-			height:                   0,
 			numRound:                 0,
 			numTxs:                   0,
 			blockSizeBytes:           0,
@@ -254,7 +252,7 @@ func (m MetricsThreshold) CSVTimeStep() error {
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
 
-	for _, j := range m.metricsCache.StringEachStep() {
+	for _, j := range m.metricsCache.StringEachTimeStep() {
 		err = writer.Write(j)
 		if err != nil {
 			return err
@@ -347,8 +345,7 @@ func (m MetricsThreshold) CSVRoundVoteSet() error {
 func (m metricsCache) StringForEachHeight() []string {
 	forheight := []string{}
 	// Height,
-	m.eachHeight.height = m.height
-	forheight = append(forheight, strconv.FormatInt(m.eachHeight.height, 10))
+	forheight = append(forheight, strconv.FormatInt(m.height, 10))
 	// islongblock
 	forheight = append(forheight, strconv.FormatBool(m.isLongBlock))
 	// Rounds,
@@ -380,7 +377,7 @@ func (m metricsCache) StringForEachHeight() []string {
 	return forheight
 }
 
-func (m metricsCache) StringEachStep() [][]string {
+func (m metricsCache) StringEachTimeStep() [][]string {
 	forStep := [][]string{}
 
 	for _, timeStep := range m.eachTime {
