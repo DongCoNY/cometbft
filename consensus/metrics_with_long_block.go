@@ -457,6 +457,7 @@ func (m metricsCache) StringForVoteSet() [][]string {
 		for _, j := range round.votes {
 			tmp := []string{}
 			tmp = append(tmp, strconv.FormatInt(m.height, 10))
+			tmp = append(tmp, strconv.FormatBool(m.isLongBlock))
 			tmp = append(tmp, strconv.FormatInt(int64(round.roundId), 10))
 			tmp = append(tmp, j.Type.String())
 			tmp = append(tmp, j.BlockID.String())
