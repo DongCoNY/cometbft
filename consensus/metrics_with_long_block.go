@@ -165,7 +165,7 @@ type metricsCache struct {
 }
 
 func (m *MetricsThreshold) WriteToFileCSV() {
-	if time.Since(m.timeOldHeight) > 5*time.Second {
+	if metricTimeOut.metricsCache.eachHeight.blockIntervalSeconds > 5 {
 		m.metricsCache.isLongBlock = true
 		m.CSVP2P()
 	} else {

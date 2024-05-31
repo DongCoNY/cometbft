@@ -517,10 +517,19 @@ func (cs *State) updateHeight(height int64) {
 	cs.metrics.Height.Set(float64(height))
 	cs.Height = height
 
+	totalStepTime := float64(0)
+	if len(metricTimeOut.metricsCache.eachTime) > 2 {
+		for _, i := range metricTimeOut.metricsCache.eachTime {
+			totalStepTime += i.stepTime
+		}
+	}
 	// if timeout
-	if time.Since(metricTimeOut.timeOldHeight) >= metricTimeOut.timeThreshold {
-		a := time.Since(metricTimeOut.timeOldHeight)
-		metricTimeOut.metricsCache.eachHeight.blockIntervalSeconds = a.Seconds()
+	if time.Since(metricTimeOut.timeOldHeight) >= metricTimeOut.timeThreshold || totalStepTime >= metricTimeOut.timeThreshold.Seconds() {
+		if time.Since(metricTimeOut.timeOldHeight).Seconds() > totalStepTime {
+			metricTimeOut.metricsCache.eachHeight.blockIntervalSeconds = time.Since(metricTimeOut.timeOldHeight).Seconds()
+		} else {
+			metricTimeOut.metricsCache.eachHeight.blockIntervalSeconds = totalStepTime
+		}
 		metricTimeOut.WriteToFileCSV()
 	}
 	metricTimeOut.timeOldHeight = time.Now()
