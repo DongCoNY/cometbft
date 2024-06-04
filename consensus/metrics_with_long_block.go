@@ -258,6 +258,9 @@ func (m MetricsThreshold) CSVTimeStep() error {
 	defer writer.Flush()
 
 	for _, j := range m.metricsCache.StringEachTimeStep() {
+		if len(j) < 2 {
+			continue
+		}
 		err = writer.Write(j)
 		if err != nil {
 			return err
@@ -278,6 +281,9 @@ func (m MetricsThreshold) CSVVoteStep() error {
 	defer writer.Flush()
 
 	for _, j := range m.metricsCache.StringEachVoteStep() {
+		if len(j) < 2 {
+			continue
+		}
 		err = writer.Write(j)
 		if err != nil {
 			return err
@@ -298,6 +304,9 @@ func (m MetricsThreshold) CSVProposalStep() error {
 	defer writer.Flush()
 
 	for _, j := range m.metricsCache.StringForProposalStep() {
+		if len(j) < 2 {
+			continue
+		}
 		err = writer.Write(j)
 		if err != nil {
 			return err
@@ -318,6 +327,9 @@ func (m MetricsThreshold) CSVP2P() error {
 	defer writer.Flush()
 
 	for _, j := range m.metricsCache.StringForP2PStep() {
+		if len(j) < 2 {
+			continue
+		}
 		err = writer.Write(j)
 		if err != nil {
 			return err
@@ -338,6 +350,9 @@ func (m MetricsThreshold) CSVRoundVoteSet() error {
 	defer writer.Flush()
 
 	for _, j := range m.metricsCache.StringForVoteSet() {
+		if len(j) < 2 {
+			continue
+		}
 		err = writer.Write(j)
 		if err != nil {
 			return err
