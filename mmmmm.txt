@@ -1,0 +1,10 @@
+level=error msg="CONSENSUS FAILURE!!!" err="runtime error: invalid memory address or nil pointer dereference" module=consensus stack="goroutine 131871 [running]:\nruntime/debug.Stack()\n\t/root/go/src/runtime/debug/stack.go:24 
++0x5e\ngithub.com/cometbft/cometbft/consensus.(*State).receiveRoutine.func2()\n\t/root/go/pkg/mod/github.com/!dong!co!n!y/cometbft@v0.37.2-inj-1.test.log.19/consensus/state.go:758 
++0x46\npanic({0x2b4d4c0?, 0x59e9d20?})\n\t/root/go/src/runtime/panic.go:770 +0x132\ngithub.com/cometbft/cometbft/consensus.(*State).enterPrecommit(0xc001764708, 0x4544f8d, 0x0)\n\t/root/go/pkg/mod/github.com/!dong!co!n!y/cometbft@v0.37.2-inj-1.test.log.19/consensus/state.go:1552
+ +0x1616\ngithub.com/cometbft/cometbft/consensus.(*State).addVote(0xc001764708, 0xc030f68f00, {0xc09228dad0, 0x28})\n\t/root/go/pkg/mod/github.com/!dong!co!n!y/cometbft@v0.37.2-inj-1.test.log.19/consensus/state.go:2295
+  +0x1825\ngithub.com/cometbft/cometbft/consensus.(*State).tryAddVote(0xc001764708, 0xc030f68f00, {0xc09228dad0?, 0xc0681088c0?})\n\t/root/go/pkg/mod/github.com/!dong!co!n!y/cometbft@v0.37.2-inj-1.test.log.19/consensus/state.go:2086
+   +0x26\ngithub.com/cometbft/cometbft/consensus.(*State).handleMsg(0xc001764708, {{0x3e860a0, 0xc05b9121a0}, {0xc09228dad0, 0x28}})\n\t/root/go/pkg/mod/github.com/!dong!co!n!y/cometbft@v0.37.2-inj-1.test.log.19/consensus/state.go:893
+    +0x3b3\ngithub.com/cometbft/cometbft/consensus.(*State).receiveRoutine(0xc001764708, 0x0)\n\t/root/go/pkg/mod/github.com/!dong!co!n!y/cometbft@v0.37.2-inj-1.test.log.19/consensus/state.go:794
+     +0x3f1\ncreated by github.com/cometbft/cometbft/consensus.(*State).OnStart in goroutine 203\n\t/root/go/pkg/mod/github.com/!dong!co!n!y/cometbft@v0.37.2-inj-1.test.log.19/consensus/state.go:379 
+     +0x10c\n"
+
