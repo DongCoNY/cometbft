@@ -1567,8 +1567,8 @@ func (cs *State) enterPrecommit(height int64, round int32) {
 			metricTimeOut.metricsCache.missingValidatorsPowerPrevoteTemporary = missingValidatorsPower
 		}
 	}
-	metricTimeOut.metricsCache.blockSizeTemporary = cs.ProposalBlock.Size()
 	if cs.ProposalBlock != nil {
+		metricTimeOut.metricsCache.blockSizeTemporary = cs.ProposalBlock.Size()
 		metricTimeOut.metricsCache.numTxsTemporary = len(cs.ProposalBlock.Data.Txs)
 	}
 
