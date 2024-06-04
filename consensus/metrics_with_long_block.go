@@ -442,7 +442,7 @@ func (m metricsCache) StringForP2PStep() [][]string {
 		tmp = append(tmp, msg.chID)
 		tmp = append(tmp, msg.msgType)
 		tmp = append(tmp, strconv.Itoa(msg.size))
-		tmp = append(tmp, msg.rawByte)
+		// tmp = append(tmp, msg.rawByte)
 		tmp = append(tmp, handleContent(msg.msgType, msg.content))
 
 		forStep = append(forStep, tmp)
