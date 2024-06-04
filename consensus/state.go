@@ -1568,7 +1568,10 @@ func (cs *State) enterPrecommit(height int64, round int32) {
 		}
 	}
 	metricTimeOut.metricsCache.blockSizeTemporary = cs.ProposalBlock.Size()
-	metricTimeOut.metricsCache.numTxsTemporary = len(cs.ProposalBlock.Data.Txs)
+	if cs.ProposalBlock != nil {
+		metricTimeOut.metricsCache.numTxsTemporary = len(cs.ProposalBlock.Data.Txs)
+	}
+
 }
 
 // Enter: any +2/3 precommits for next round.
