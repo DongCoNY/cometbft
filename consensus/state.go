@@ -1549,9 +1549,16 @@ func (cs *State) enterPrecommit(height int64, round int32) {
 		if cs.Height > cs.state.InitialHeight {
 			var missingValidatorsPower int64
 			for i, val := range cs.LastValidators.Validators {
+				if cs.ProposalBlock == nil {
+					continue
+				}
+				if cs.ProposalBlock.LastCommit == nil {
+					continue
+				}
 				if cs.ProposalBlock.LastCommit.Signatures == nil {
 					continue
 				}
+
 				commitSig := cs.ProposalBlock.LastCommit.Signatures[i]
 				if commitSig.Absent() {
 					missingValidatorsPower += val.VotingPower
