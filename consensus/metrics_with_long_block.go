@@ -464,8 +464,12 @@ func handleContent(msgTypes, content string) string {
 	if msgTypes == "consensus_Vote" {
 		re := regexp.MustCompile(`(type:\S+).*?(validator_index:\d+)`)
 		match := re.FindStringSubmatch(content)
-		result := strings.Join(match[1:], " ")
-		return result
+		if len(match) > 1 {
+			return strings.Join(match[1:], " ")
+		} else {
+			return content
+		}
+
 	}
 	if msgTypes == "mempool_Txs" {
 		return ""
