@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 
 	"strings"
@@ -434,7 +435,6 @@ func (m metricsCache) StringForP2PStep() [][]string {
 	for _, msg := range m.eachMsg {
 		tmp := []string{}
 		tmp = append(tmp, strconv.FormatInt(m.height, 10))
-		tmp = append(tmp, strconv.FormatBool(m.isLongBlock))
 		tmp = append(tmp, strconv.FormatInt(int64(msg.roundId), 10))
 		tmp = append(tmp, msg.step)
 		tmp = append(tmp, msg.fromPeer)
@@ -443,15 +443,35 @@ func (m metricsCache) StringForP2PStep() [][]string {
 		tmp = append(tmp, msg.msgType)
 		tmp = append(tmp, strconv.Itoa(msg.size))
 		tmp = append(tmp, msg.rawByte)
-		tmp = append(tmp, msg.content)
+		tmp = append(tmp, handleContent(msg.msgType, msg.content))
 
 		forStep = append(forStep, tmp)
 	}
 	return forStep
 }
 
+func handleContent(msgTypes, content string) string {
+	if msgTypes == "consensus_HasVote" {
+		re := regexp.MustCompile(`(type:\S+).*?(index:\d+)`)
+		match := re.FindStringSubmatch(content)
+		result := strings.Join(match[1:], " ")
+		return result
+	}
+	if msgTypes == "consensus_Vote" {
+		re := regexp.MustCompile(`(type:\S+).*?(validator_index:\d+)`)
+		match := re.FindStringSubmatch(content)
+		result := strings.Join(match[1:], " ")
+		return result
+	}
+	if msgTypes == "mempool_Txs" {
+		return ""
+	}
+	return content
+}
+
 func (m metricsCache) StringForVoteSet() [][]string {
 	forStep := [][]string{}
+	fmt.Println("votttttttttt l=", len(m.roundVotes))
 
 	for _, round := range m.roundVotes {
 		for _, j := range round.votes {
