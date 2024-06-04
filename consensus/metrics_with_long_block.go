@@ -162,6 +162,8 @@ type metricsCache struct {
 	numTxsTemporary             int
 	numblockPartsTemporary      uint32
 	blockPartsReceivedTemporary int
+
+	voteTemporary []*types.Vote
 }
 
 func (m *MetricsThreshold) WriteToFileCSV() {
@@ -209,6 +211,8 @@ func NopCacheMetricsCache() metricsCache {
 		blockPartsSendTemporary:     0,
 		numblockPartsTemporary:      0,
 		blockPartsReceivedTemporary: 0,
+
+		voteTemporary: []*types.Vote{},
 	}
 }
 
@@ -545,9 +549,13 @@ func (m *MetricsThreshold) handleSaveNewRound(roundId int64) {
 		blockPartsReceived: m.metricsCache.blockPartsReceivedTemporary,
 	})
 
+	m.metricsCache.roundVotes = append(m.metricsCache.roundVotes, roundVoteSet{roundId: uint32(roundId), votes: m.metricsCache.voteTemporary})
+
 	m.metricsCache.blockSizeTemporary = 0
 	m.metricsCache.blockPartsSendTemporary = 0
 	m.metricsCache.numTxsTemporary = 0
 	m.metricsCache.numblockPartsTemporary = 0
 	m.metricsCache.blockPartsReceivedTemporary = 0
+
+	m.metricsCache.voteTemporary = []*types.Vote{}
 }

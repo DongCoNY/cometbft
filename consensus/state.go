@@ -892,6 +892,7 @@ func (cs *State) handleMsg(mi msgInfo) {
 		// if the vote gives us a 2/3-any or 2/3-one, we transition
 		added, err = cs.tryAddVote(msg.Vote, peerID)
 		if added {
+			metricTimeOut.metricsCache.voteTemporary = append(metricTimeOut.metricsCache.voteTemporary, msg.Vote)
 			if peerID == "" {
 				metricTimeOut.metricsCache.numVoteSentTemporary += 1
 			} else {
@@ -1318,12 +1319,6 @@ func (cs *State) enterPrevote(height int64, round int32) {
 			metricTimeOut.metricsCache.missingValidatorsPowerPrevoteTemporary = missingValidatorsPower
 		}
 	}
-
-	newRoundVoteSet := roundVoteSet{
-		roundId: uint32(round),
-		votes:   cs.Votes.Prevotes(round).GetVotes(),
-	}
-	metricTimeOut.metricsCache.roundVotes = append(metricTimeOut.metricsCache.roundVotes, newRoundVoteSet)
 }
 
 func (cs *State) defaultDoPrevote(height int64, round int32) {
@@ -1564,13 +1559,6 @@ func (cs *State) enterPrecommit(height int64, round int32) {
 	}
 	metricTimeOut.metricsCache.blockSizeTemporary = cs.ProposalBlock.Size()
 	metricTimeOut.metricsCache.numTxsTemporary = len(cs.ProposalBlock.Data.Txs)
-
-	newRoundVoteSet := roundVoteSet{
-		roundId: uint32(round),
-		votes:   cs.Votes.Precommits(round).GetVotes(),
-	}
-	metricTimeOut.metricsCache.roundVotes = append(metricTimeOut.metricsCache.roundVotes, newRoundVoteSet)
-
 }
 
 // Enter: any +2/3 precommits for next round.
