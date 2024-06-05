@@ -132,7 +132,7 @@ type stepMessageP2P struct {
 	msgType  string
 	size     int
 	rawByte  string
-	content  string
+	info     string
 }
 
 // Prevote và precommit for round
@@ -462,7 +462,7 @@ func (m metricsCache) StringForP2PStep() [][]string {
 		tmp = append(tmp, msg.msgType)
 		tmp = append(tmp, strconv.Itoa(msg.size))
 		// tmp = append(tmp, msg.rawByte)
-		tmp = append(tmp, handleContent(msg.msgType, msg.content))
+		tmp = append(tmp, handleContent(msg.msgType, msg.info))
 
 		forStep = append(forStep, tmp)
 	}
@@ -480,14 +480,32 @@ func handleContent(msgTypes, content string) string {
 		}
 	}
 	if msgTypes == "consensus_Vote" {
-		re := regexp.MustCompile(`(type:\S+).*?(validator_index:\d+)`)
+		re := regexp.MustCompile(`(seconds:\d+).*?(nanos:\d+).*?(validator_index:\d+)`)
 		match := re.FindStringSubmatch(content)
-		if len(match) > 1 {
-			return strings.Join(match[1:], " ")
+
+		if len(match) >= 3 {
+			second, _ := strconv.Atoi(match[1][8:])
+			nano, _ := strconv.Atoi(match[2][6:])
+			t := time.Unix(int64(second), int64(nano))
+			return t.String() + " " + match[3]
 		} else {
 			return content
 		}
 
+	}
+	if msgTypes == "consensus_NewRoundStep" {
+		re := regexp.MustCompile(`(step:\d+).*?(seconds_since_start_time:\d+)`)
+		match := re.FindStringSubmatch(content)
+		if len(match) > 1 {
+			return strings.Join(match[1:], " ")
+		} else {
+			re2 := regexp.MustCompile(`(step:\d+).*?`)
+			match2 := re2.FindStringSubmatch(content)
+			if len(match2) > 1 {
+				return match2[0]
+			}
+			return content
+		}
 	}
 	if msgTypes == "mempool_Txs" {
 		return ""
@@ -550,7 +568,7 @@ func (m *MetricsThreshold) handleSaveNewStep(roundId int64, step string) {
 			msgType:  msg.TypeIs,
 			size:     msg.Size,
 			rawByte:  msg.RawByte,
-			content:  msg.Content,
+			info:     msg.Content,
 		})
 	}
 
