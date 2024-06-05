@@ -123,16 +123,17 @@ type stepTime struct {
 }
 
 type stepMessageP2P struct {
-	roundId int64
-	step    string
-
+	roundId  int64
+	step     string
 	fromPeer string
-	toPeer   string
-	chID     string
-	msgType  string
-	size     int
-	rawByte  string
-	info     string
+
+	matchCurrentStep bool
+	toPeer           string
+	chID             string
+	msgType          string
+	size             int
+	rawByte          string
+	info             string
 }
 
 // Prevote và precommit for round
@@ -456,20 +457,32 @@ func (m metricsCache) StringForP2PStep() [][]string {
 		tmp = append(tmp, strconv.FormatInt(m.height, 10))
 		tmp = append(tmp, strconv.FormatInt(int64(msg.roundId), 10))
 		tmp = append(tmp, msg.step)
+		tmp = append(tmp, strconv.FormatBool(msg.matchCurrentStep))
 		tmp = append(tmp, msg.fromPeer)
 		tmp = append(tmp, msg.toPeer)
 		tmp = append(tmp, msg.chID)
 		tmp = append(tmp, msg.msgType)
 		tmp = append(tmp, strconv.Itoa(msg.size))
 		// tmp = append(tmp, msg.rawByte)
-		tmp = append(tmp, handleContent(msg.msgType, msg.info))
+		tmp = append(tmp, handleP2PInfo(msg.msgType, msg.info))
 
 		forStep = append(forStep, tmp)
 	}
 	return forStep
 }
 
-func handleContent(msgTypes, content string) string {
+func matchCurrentStep(stepCurrent, content string) bool {
+	var stepInfo string
+	re := regexp.MustCompile(`(step:\d+).*?`)
+	match := re.FindStringSubmatch(content)
+	if len(match) > 1 {
+		step, _ := strconv.Atoi(match[0][5:])
+		stepInfo = strings.TrimPrefix(cstypes.RoundStepType(step).String(), "RoundStep")
+	}
+	return stepInfo == stepCurrent
+}
+
+func handleP2PInfo(msgTypes, content string) string {
 	if msgTypes == "consensus_HasVote" {
 		re := regexp.MustCompile(`(type:\S+).*?(index:\d+)`)
 		match := re.FindStringSubmatch(content)
@@ -559,8 +572,9 @@ func (m *MetricsThreshold) handleSaveNewStep(roundId int64, step string) {
 
 	for _, msg := range p2p.CacheMetricLongBlock {
 		m.metricsCache.eachMsg = append(m.metricsCache.eachMsg, stepMessageP2P{
-			roundId: roundId,
-			step:    step,
+			roundId:          roundId,
+			step:             step,
+			matchCurrentStep: matchCurrentStep(step, msg.Content),
 
 			fromPeer: msg.FromPeer,
 			toPeer:   msg.ToPeer,
