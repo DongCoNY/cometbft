@@ -523,6 +523,9 @@ func handleP2PInfo(msgTypes, content string) string {
 	if msgTypes == "mempool_Txs" {
 		return ""
 	}
+	if msgTypes == "consensus_BlockPart" {
+		return ""
+	}
 	return content
 }
 
