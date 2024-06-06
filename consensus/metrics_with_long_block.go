@@ -537,11 +537,8 @@ func (m metricsCache) StringForVoteSet() [][]string {
 			tmp = append(tmp, strconv.FormatBool(m.isLongBlock))
 			tmp = append(tmp, strconv.FormatInt(int64(round.roundId), 10))
 			tmp = append(tmp, j.Type.String())
-			tmp = append(tmp, j.BlockID.String())
 			tmp = append(tmp, j.Timestamp.GoString())
-			tmp = append(tmp, j.ValidatorAddress.String())
 			tmp = append(tmp, strconv.FormatInt(int64(j.ValidatorIndex), 10))
-			tmp = append(tmp, fmt.Sprintf("%v", j.Signature))
 			forStep = append(forStep, tmp)
 		}
 	}
