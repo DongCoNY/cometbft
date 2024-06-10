@@ -535,6 +535,7 @@ func (cs *State) updateRoundStep(round int32, step cstypes.RoundStepType) {
 			metricTimeOut.handleSaveNewStep(int64(cs.Round), step.String())
 		}
 	}
+	// if new height then save
 	if step == cstypes.RoundStepNewHeight {
 		totalStepTime := float64(0)
 		if len(metricTimeOut.metricsCache.eachTime) > 2 {
