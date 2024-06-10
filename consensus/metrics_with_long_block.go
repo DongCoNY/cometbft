@@ -219,7 +219,7 @@ func NopCacheMetricsCache() metricsCache {
 
 func (m *MetricsThreshold) ResetCache() {
 	m.metricsCache.eachHeight.blockGossipPartsReceived = 0
-	m.metricsCache.eachHeight.numRound = 0
+	m.metricsCache.eachHeight.numRound = 1
 	m.metricsCache.eachHeight.quorumPrevoteDelay = 0
 	m.metricsCache.eachHeight.proposalCreateCount = 0
 	m.metricsCache.eachHeight.proposalReceiveCount = 0

@@ -522,11 +522,13 @@ func (cs *State) updateRoundStep(round int32, step cstypes.RoundStepType) {
 	if !cs.replayMode {
 		if round != cs.Round || round == 0 && step == cstypes.RoundStepNewRound {
 			cs.metrics.MarkRound(cs.Round, cs.StartTime)
-			metricTimeOut.metricsCache.eachHeight.numRound += 1
 			metricTimeOut.handleSaveNewRound(int64(cs.Round))
+
+			if step != cstypes.RoundStepCommit {
+				metricTimeOut.metricsCache.eachHeight.numRound += 1
+			}
 		}
 		if cs.Step != step {
-
 			cs.metrics.MarkStep(cs.Step)
 			metricTimeOut.MarkStepTimes(cs.Step, uint32(cs.Round))
 			// save and reset
