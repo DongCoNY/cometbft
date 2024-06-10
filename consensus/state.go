@@ -516,27 +516,6 @@ func (cs *State) SetProposalAndBlock(
 func (cs *State) updateHeight(height int64) {
 	cs.metrics.Height.Set(float64(height))
 	cs.Height = height
-
-	totalStepTime := float64(0)
-	if len(metricTimeOut.metricsCache.eachTime) > 2 {
-		for _, i := range metricTimeOut.metricsCache.eachTime {
-			totalStepTime += i.stepTime
-		}
-	}
-	// if timeout
-	if time.Since(metricTimeOut.timeOldHeight) >= metricTimeOut.timeThreshold || totalStepTime >= metricTimeOut.timeThreshold.Seconds() {
-		if time.Since(metricTimeOut.timeOldHeight).Seconds() > totalStepTime {
-			metricTimeOut.metricsCache.eachHeight.blockIntervalSeconds = time.Since(metricTimeOut.timeOldHeight).Seconds()
-		} else {
-			metricTimeOut.metricsCache.eachHeight.blockIntervalSeconds = totalStepTime
-		}
-		metricTimeOut.WriteToFileCSV()
-	}
-	metricTimeOut.timeOldHeight = time.Now()
-	// resets cache
-	p2p.ResetCacheMetrics()
-	metricTimeOut.ResetCache()
-	metricTimeOut.metricsCache.height = height
 }
 
 func (cs *State) updateRoundStep(round int32, step cstypes.RoundStepType) {
@@ -544,16 +523,39 @@ func (cs *State) updateRoundStep(round int32, step cstypes.RoundStepType) {
 		if round != cs.Round || round == 0 && step == cstypes.RoundStepNewRound {
 			cs.metrics.MarkRound(cs.Round, cs.StartTime)
 			metricTimeOut.metricsCache.eachHeight.numRound += 1
-			metricTimeOut.handleSaveNewRound(int64(round))
+			metricTimeOut.handleSaveNewRound(int64(cs.Round))
 		}
 		if cs.Step != step {
 
 			cs.metrics.MarkStep(cs.Step)
-			metricTimeOut.MarkStepTimes(step, uint32(round))
+			metricTimeOut.MarkStepTimes(cs.Step, uint32(cs.Round))
 			// save and reset
-			metricTimeOut.handleSaveNewStep(int64(round), step.String())
+			metricTimeOut.handleSaveNewStep(int64(cs.Round), step.String())
 		}
 	}
+	if step == cstypes.RoundStepNewHeight {
+		totalStepTime := float64(0)
+		if len(metricTimeOut.metricsCache.eachTime) > 2 {
+			for _, i := range metricTimeOut.metricsCache.eachTime {
+				totalStepTime += i.stepTime
+			}
+		}
+		// if timeout
+		if time.Since(metricTimeOut.timeOldHeight) >= metricTimeOut.timeThreshold || totalStepTime >= metricTimeOut.timeThreshold.Seconds() {
+			if time.Since(metricTimeOut.timeOldHeight).Seconds() > totalStepTime {
+				metricTimeOut.metricsCache.eachHeight.blockIntervalSeconds = time.Since(metricTimeOut.timeOldHeight).Seconds()
+			} else {
+				metricTimeOut.metricsCache.eachHeight.blockIntervalSeconds = totalStepTime
+			}
+			metricTimeOut.WriteToFileCSV()
+		}
+		metricTimeOut.timeOldHeight = time.Now()
+		// resets cache
+		p2p.ResetCacheMetrics()
+		metricTimeOut.ResetCache()
+		metricTimeOut.metricsCache.height = cs.Height
+	}
+
 	cs.Round = round
 	cs.Step = step
 }
