@@ -544,6 +544,7 @@ func (cs *State) updateRoundStep(round int32, step cstypes.RoundStepType) {
 			}
 		}
 		// if timeout and do not catchup
+		fmt.Println("cs.doWALCatchup=========", cs.doWALCatchup)
 		if (time.Since(metricTimeOut.timeOldHeight) >= metricTimeOut.timeThreshold || totalStepTime >= metricTimeOut.timeThreshold.Seconds()) && !cs.doWALCatchup {
 			if time.Since(metricTimeOut.timeOldHeight).Seconds() > totalStepTime {
 				metricTimeOut.metricsCache.eachHeight.blockIntervalSeconds = time.Since(metricTimeOut.timeOldHeight).Seconds()
