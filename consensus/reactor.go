@@ -79,7 +79,7 @@ func (conR *Reactor) OnStart() error {
 
 	conR.subscribeToBroadcastEvents()
 	go conR.updateRoundStateRoutine()
-
+	fmt.Println("connnnnnnnnnnn: ", conR.conS.doWALCatchup)
 	if !conR.WaitSync() {
 		err := conR.conS.Start()
 		if err != nil {
