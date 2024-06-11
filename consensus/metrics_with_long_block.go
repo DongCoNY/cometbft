@@ -327,7 +327,10 @@ func (m MetricsThreshold) CSVP2P() error {
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
 
-	for _, j := range m.metricsCache.StringForP2PStep() {
+	a := m.metricsCache.StringForP2PStep()
+	fmt.Println("votttttttttt l=", len(a))
+
+	for _, j := range a {
 		if j == nil || len(j) < 2 {
 			continue
 		}
@@ -531,7 +534,6 @@ func handleP2PInfo(msgTypes, content string) string {
 
 func (m metricsCache) StringForVoteSet() [][]string {
 	forStep := [][]string{}
-	fmt.Println("votttttttttt l=", len(m.roundVotes))
 
 	for _, round := range m.roundVotes {
 		for _, j := range round.votes {
