@@ -543,8 +543,8 @@ func (cs *State) updateRoundStep(round int32, step cstypes.RoundStepType) {
 				totalStepTime += i.stepTime
 			}
 		}
-		// if timeout
-		if time.Since(metricTimeOut.timeOldHeight) >= metricTimeOut.timeThreshold || totalStepTime >= metricTimeOut.timeThreshold.Seconds() {
+		// if timeout and do not catchup
+		if (time.Since(metricTimeOut.timeOldHeight) >= metricTimeOut.timeThreshold || totalStepTime >= metricTimeOut.timeThreshold.Seconds()) && !cs.doWALCatchup {
 			if time.Since(metricTimeOut.timeOldHeight).Seconds() > totalStepTime {
 				metricTimeOut.metricsCache.eachHeight.blockIntervalSeconds = time.Since(metricTimeOut.timeOldHeight).Seconds()
 			} else {
