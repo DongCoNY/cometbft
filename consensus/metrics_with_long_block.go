@@ -372,36 +372,36 @@ func (m MetricsThreshold) CSVRoundVoteSet() error {
 
 func (m metricsCache) StringForEachHeight() []string {
 	forheight := []string{}
-	// Height,
+	// 0:Height,
 	forheight = append(forheight, strconv.FormatInt(m.height, 10))
-	// islongblock
+	// 1:islongblock
 	forheight = append(forheight, strconv.FormatBool(m.isLongBlock))
-	// Rounds,
+	// 2:Rounds,
 	forheight = append(forheight, strconv.Itoa(m.eachHeight.numRound))
-	// BlockIntervalSeconds,
+	// 3:BlockIntervalSeconds,
 	forheight = append(forheight, strconv.FormatFloat(m.eachHeight.blockIntervalSeconds, 'f', -1, 64))
-	// NumTxs,
+	// 4:NumTxs,
 	forheight = append(forheight, strconv.Itoa(m.eachHeight.numTxs))
-	// BlockSizeBytes,
+	// 5:BlockSizeBytes,
 	forheight = append(forheight, strconv.Itoa(m.eachHeight.blockSizeBytes))
-	// BlockParts,
+	// 6:BlockParts,
 	forheight = append(forheight, strconv.Itoa(int(m.eachHeight.blockParts)))
 
-	// BlockGossipPartsReceived
+	// 7:BlockGossipPartsReceived
 	forheight = append(forheight, strconv.Itoa(m.eachHeight.blockGossipPartsReceived))
 
-	// QuorumPrevoteDelay,
+	// 8:QuorumPrevoteDelay,
 	forheight = append(forheight, strconv.FormatFloat(m.eachHeight.quorumPrevoteDelay, 'f', -1, 64))
 
-	// full delay
+	// 9:full delay
 	forheight = append(forheight, strconv.FormatFloat(m.eachHeight.fullPrevoteDelay, 'f', -1, 64))
 
-	// ProposalReceiveCount,
+	// 10:ProposalReceiveCount,
 	forheight = append(forheight, strconv.Itoa(m.eachHeight.proposalReceiveCount))
 
-	// proposalCreateCount,
+	// 11:proposalCreateCount,
 	forheight = append(forheight, strconv.Itoa(int(m.eachHeight.proposalCreateCount)))
-
+	// 12:numMsgP2P
 	forheight = append(forheight, strconv.Itoa(m.eachHeight.numMsgP2P))
 
 	return forheight
