@@ -94,6 +94,7 @@ type blockHeight struct {
 	fullPrevoteDelay         float64
 	proposalReceiveCount     int
 	proposalCreateCount      int64
+	numMsgP2P                int
 }
 
 type roundProposal struct {
@@ -174,6 +175,7 @@ func (m *MetricsThreshold) WriteToFileCSV() {
 	} else {
 		m.metricsCache.isLongBlock = false
 	}
+	m.CountMsgP2P()
 	m.CSVEachHeight()
 	m.CSVProposalStep()
 	m.CSVTimeStep()
@@ -194,6 +196,7 @@ func NopCacheMetricsCache() metricsCache {
 			quorumPrevoteDelay:       0,
 			proposalCreateCount:      0,
 			proposalReceiveCount:     0,
+			numMsgP2P:                0,
 		},
 
 		eachTime:     []stepTime{},
@@ -222,6 +225,7 @@ func (m *MetricsThreshold) ResetCache() {
 	m.metricsCache.eachHeight.numRound = 1
 	m.metricsCache.eachHeight.quorumPrevoteDelay = 0
 	m.metricsCache.eachHeight.proposalCreateCount = 0
+	m.metricsCache.eachHeight.numMsgP2P = 0
 	m.metricsCache.eachHeight.proposalReceiveCount = 0
 
 	m.metricsCache.eachTime = []stepTime{}
@@ -397,6 +401,8 @@ func (m metricsCache) StringForEachHeight() []string {
 
 	// proposalCreateCount,
 	forheight = append(forheight, strconv.Itoa(int(m.eachHeight.proposalCreateCount)))
+
+	forheight = append(forheight, strconv.Itoa(m.eachHeight.numMsgP2P))
 
 	return forheight
 }
@@ -614,4 +620,8 @@ func (m *MetricsThreshold) handleSaveNewRound(roundId int64) {
 	m.metricsCache.blockPartsReceivedTemporary = 0
 
 	m.metricsCache.voteTemporary = []*types.Vote{}
+}
+
+func (m *MetricsThreshold) CountMsgP2P() {
+	m.metricsCache.eachHeight.numMsgP2P = len(m.metricsCache.eachMsg)
 }
