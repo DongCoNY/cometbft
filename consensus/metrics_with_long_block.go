@@ -519,10 +519,14 @@ func (m metricsCache) StringForP2PStep() [][]string {
 
 func matchCurrentStep(stepCurrent, content string) bool {
 	var stepInfo string
-	re := regexp.MustCompile(`(step:\d+).*?`)
+	re := regexp.MustCompile(`step:(\d+)`)
 	match := re.FindStringSubmatch(content)
 	if len(match) > 1 {
-		step, _ := strconv.Atoi(match[0][5:])
+		step, err := strconv.Atoi(match[1])
+		if err != nil {
+			fmt.Println("Error converting step to integer:", err)
+			return false
+		}
 		stepInfo = strings.TrimPrefix(cstypes.RoundStepType(step).String(), "RoundStep")
 	}
 	return stepInfo == stepCurrent
