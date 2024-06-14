@@ -1112,6 +1112,7 @@ func (cs *State) needProofBlock(height int64) bool {
 // Enter (!CreateEmptyBlocks) : after enterNewRound(height,round), once txs are in the mempool
 func (cs *State) enterPropose(height int64, round int32) {
 	logger := cs.Logger.With("height", height, "round", round)
+	metricTimeOut.metricsCache.timeProsal = append(metricTimeOut.metricsCache.timeProsal, prosalTime{round: int(round), numlog: 0, stepStart: time.Now()})
 
 	if cs.Height != height || round < cs.Round || (cs.Round == round && cstypes.RoundStepPropose <= cs.Step) {
 		logger.Debug(
@@ -1132,6 +1133,7 @@ func (cs *State) enterPropose(height int64, round int32) {
 		// else, we'll enterPrevote when the rest of the proposal is received (in AddProposalBlockPart),
 		// or else after timeoutPropose
 		if cs.isProposalComplete() {
+			metricTimeOut.metricsCache.timeProsal = append(metricTimeOut.metricsCache.timeProsal, prosalTime{round: int(round), numlog: 2, stepStart: time.Now()})
 			cs.enterPrevote(height, cs.Round)
 		}
 	}()
@@ -1168,6 +1170,7 @@ func (cs *State) enterPropose(height int64, round int32) {
 	} else {
 		logger.Debug("propose step; not our turn to propose", "proposer", cs.Validators.GetProposer().Address)
 	}
+	metricTimeOut.metricsCache.timeProsal = append(metricTimeOut.metricsCache.timeProsal, prosalTime{round: int(round), numlog: 1, stepStart: time.Now()})
 }
 
 func (cs *State) isProposer(address []byte) bool {

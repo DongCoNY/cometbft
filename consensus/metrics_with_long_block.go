@@ -25,6 +25,7 @@ var (
 	pathBlockOnlyTimeStep string
 	pathBlockP2P          string
 	pathRoundVoteSet      string
+	pathProsalTime        string
 )
 
 func init() {
@@ -62,6 +63,10 @@ func init() {
 		pathRoundVoteSet = metricspath + "/RoundVoteSet.csv"
 		file6, _ := os.Create(pathRoundVoteSet)
 		defer file6.Close()
+
+		pathProsalTime = metricspath + "ProsalTime.csv"
+		file7, _ := os.Create(pathProsalTime)
+		defer file7.Close()
 	} else {
 		pathBlockProposalStep = metricspath + "/blockProposalStep.csv"
 		pathBlockVoteStep = metricspath + "/blockVoteStep.csv"
@@ -69,6 +74,7 @@ func init() {
 		pathBlockOnlyTimeStep = metricspath + "/blockOnlyTimeStep.csv"
 		pathBlockP2P = metricspath + "/blockP2P.csv"
 		pathRoundVoteSet = metricspath + "/RoundVoteSet.csv"
+		pathProsalTime = metricspath + "ProsalTime.csv"
 	}
 }
 
@@ -166,12 +172,15 @@ type metricsCache struct {
 	blockPartsReceivedTemporary int
 
 	voteTemporary []*types.Vote
+
+	timeProsal []prosalTime
 }
 
 func (m *MetricsThreshold) WriteToFileCSV() {
 	if metricTimeOut.metricsCache.eachHeight.blockIntervalSeconds > 5 {
 		m.metricsCache.isLongBlock = true
 		m.CSVP2P()
+		m.CSVProsalTime()
 	} else {
 		m.metricsCache.isLongBlock = false
 	}
@@ -217,6 +226,7 @@ func NopCacheMetricsCache() metricsCache {
 		blockPartsReceivedTemporary: 0,
 
 		voteTemporary: []*types.Vote{},
+		timeProsal:    []prosalTime{},
 	}
 }
 
@@ -233,10 +243,12 @@ func (m *MetricsThreshold) ResetCache() {
 	m.metricsCache.eachProposal = []roundProposal{}
 	m.metricsCache.eachVote = []stepVote{}
 	m.metricsCache.eachMsg = []stepMessageP2P{}
+
+	m.metricsCache.timeProsal = []prosalTime{}
 }
 
 func (m MetricsThreshold) CSVEachHeight() error {
-	file, err := os.OpenFile(pathBlock, os.O_WRONLY|os.O_APPEND, os.ModeAppend)
+	file, err := os.OpenFile(pathBlock, os.O_WRONLY|os.O_APPEND|os.O_CREATE, os.ModeAppend)
 	if err != nil {
 		return err
 	}
@@ -253,7 +265,7 @@ func (m MetricsThreshold) CSVEachHeight() error {
 }
 
 func (m MetricsThreshold) CSVTimeStep() error {
-	file, err := os.OpenFile(pathBlockOnlyTimeStep, os.O_WRONLY|os.O_APPEND, os.ModeAppend)
+	file, err := os.OpenFile(pathBlockOnlyTimeStep, os.O_WRONLY|os.O_APPEND|os.O_CREATE, os.ModeAppend)
 	if err != nil {
 		return err
 	}
@@ -276,7 +288,7 @@ func (m MetricsThreshold) CSVTimeStep() error {
 }
 
 func (m MetricsThreshold) CSVVoteStep() error {
-	file, err := os.OpenFile(pathBlockVoteStep, os.O_WRONLY|os.O_APPEND, os.ModeAppend)
+	file, err := os.OpenFile(pathBlockVoteStep, os.O_WRONLY|os.O_APPEND|os.O_CREATE, os.ModeAppend)
 	if err != nil {
 		return err
 	}
@@ -299,7 +311,7 @@ func (m MetricsThreshold) CSVVoteStep() error {
 }
 
 func (m MetricsThreshold) CSVProposalStep() error {
-	file, err := os.OpenFile(pathBlockProposalStep, os.O_WRONLY|os.O_APPEND, os.ModeAppend)
+	file, err := os.OpenFile(pathBlockProposalStep, os.O_WRONLY|os.O_APPEND|os.O_CREATE, os.ModeAppend)
 	if err != nil {
 		return err
 	}
@@ -322,7 +334,7 @@ func (m MetricsThreshold) CSVProposalStep() error {
 }
 
 func (m MetricsThreshold) CSVP2P() error {
-	file, err := os.OpenFile(pathBlockP2P, os.O_WRONLY|os.O_APPEND, os.ModeAppend)
+	file, err := os.OpenFile(pathBlockP2P, os.O_WRONLY|os.O_APPEND|os.O_CREATE, os.ModeAppend)
 	if err != nil {
 		return err
 	}
@@ -348,7 +360,7 @@ func (m MetricsThreshold) CSVP2P() error {
 }
 
 func (m MetricsThreshold) CSVRoundVoteSet() error {
-	file, err := os.OpenFile(pathRoundVoteSet, os.O_WRONLY|os.O_APPEND, os.ModeAppend)
+	file, err := os.OpenFile(pathRoundVoteSet, os.O_WRONLY|os.O_APPEND|os.O_CREATE, os.ModeAppend)
 	if err != nil {
 		return err
 	}
@@ -358,6 +370,31 @@ func (m MetricsThreshold) CSVRoundVoteSet() error {
 	defer writer.Flush()
 
 	for _, j := range m.metricsCache.StringForVoteSet() {
+		if j == nil || len(j) < 2 {
+			continue
+		}
+		err = writer.Write(j)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (m MetricsThreshold) CSVProsalTime() error {
+	file, err := os.OpenFile(pathProsalTime, os.O_WRONLY|os.O_APPEND|os.O_CREATE, os.ModeAppend)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	a := m.metricsCache.StringForProsalTimeStep()
+
+	for _, j := range a {
 		if j == nil || len(j) < 2 {
 			continue
 		}
@@ -556,6 +593,26 @@ func (m metricsCache) StringForVoteSet() [][]string {
 	return forStep
 }
 
+func (m metricsCache) StringForProsalTimeStep() [][]string {
+	forStep := [][]string{}
+	var t time.Time
+	for _, round := range m.timeProsal {
+		tmp := []string{}
+		tmp = append(tmp, strconv.FormatInt(m.height, 10))
+		tmp = append(tmp, strconv.FormatInt(int64(round.round), 10))
+		tmp = append(tmp, strconv.Itoa(round.numlog))
+		if round.numlog == 0 {
+			tmp = append(tmp, strconv.Itoa(0))
+		} else {
+			tmp = append(tmp, strconv.FormatFloat(round.stepStart.Sub(t).Seconds(), 'f', -1, 64))
+		}
+
+		t = round.stepStart
+		forStep = append(forStep, tmp)
+	}
+	return forStep
+}
+
 func (m *MetricsThreshold) MarkStepTimes(s cstypes.RoundStepType, roundID uint32) {
 	if !m.stepStart.IsZero() {
 		stepT := time.Since(m.stepStart).Seconds()
@@ -624,4 +681,10 @@ func (m *MetricsThreshold) handleSaveNewRound(roundId int64) {
 
 func (m *MetricsThreshold) CountMsgP2P() {
 	m.metricsCache.eachHeight.numMsgP2P = len(m.metricsCache.eachMsg)
+}
+
+type prosalTime struct {
+	round     int
+	numlog    int
+	stepStart time.Time
 }
