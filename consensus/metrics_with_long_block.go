@@ -265,7 +265,7 @@ func (m MetricsThreshold) CSVEachHeight() error {
 }
 
 func (m MetricsThreshold) CSVTimeStep() error {
-	file, err := os.OpenFile(pathBlockOnlyTimeStep, os.O_WRONLY|os.O_APPEND, os.ModeAppend)
+	file, err := os.OpenFile(pathBlockOnlyTimeStep, os.O_WRONLY|os.O_APPEND|os.O_CREATE, os.ModeAppend)
 	if err != nil {
 		return err
 	}
@@ -311,7 +311,7 @@ func (m MetricsThreshold) CSVVoteStep() error {
 }
 
 func (m MetricsThreshold) CSVProposalStep() error {
-	file, err := os.OpenFile(pathBlockProposalStep, os.O_WRONLY|os.O_APPEND, os.ModeAppend)
+	file, err := os.OpenFile(pathBlockProposalStep, os.O_WRONLY|os.O_APPEND|os.O_CREATE, os.ModeAppend)
 	if err != nil {
 		return err
 	}
@@ -334,7 +334,7 @@ func (m MetricsThreshold) CSVProposalStep() error {
 }
 
 func (m MetricsThreshold) CSVP2P() error {
-	file, err := os.OpenFile(pathBlockP2P, os.O_WRONLY|os.O_APPEND, os.ModeAppend)
+	file, err := os.OpenFile(pathBlockP2P, os.O_WRONLY|os.O_APPEND|os.O_CREATE, os.ModeAppend)
 	if err != nil {
 		return err
 	}
@@ -360,7 +360,7 @@ func (m MetricsThreshold) CSVP2P() error {
 }
 
 func (m MetricsThreshold) CSVRoundVoteSet() error {
-	file, err := os.OpenFile(pathRoundVoteSet, os.O_WRONLY|os.O_APPEND, os.ModeAppend)
+	file, err := os.OpenFile(pathRoundVoteSet, os.O_WRONLY|os.O_APPEND|os.O_CREATE, os.ModeAppend)
 	if err != nil {
 		return err
 	}
@@ -383,7 +383,7 @@ func (m MetricsThreshold) CSVRoundVoteSet() error {
 }
 
 func (m MetricsThreshold) CSVProsalTime() error {
-	file, err := os.OpenFile(pathProsalTime, os.O_WRONLY|os.O_APPEND, os.ModeAppend)
+	file, err := os.OpenFile(pathProsalTime, os.O_WRONLY|os.O_APPEND|os.O_CREATE, os.ModeAppend)
 	if err != nil {
 		return err
 	}
