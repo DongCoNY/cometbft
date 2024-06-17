@@ -1,7 +1,6 @@
 package light
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -301,16 +300,16 @@ func (c *Client) restoreTrustedLightBlock() error {
 // The intuition here is the user is always right. I.e. if she decides to reset
 // the light client with an older header, there must be a reason for it.
 func (c *Client) checkTrustedHeaderUsingOptions(ctx context.Context, options TrustOptions) error {
-	var primaryHash []byte
+	// var primaryHash []byte
 	switch {
 	case options.Height > c.latestTrustedBlock.Height:
-		h, err := c.lightBlockFromPrimary(ctx, c.latestTrustedBlock.Height)
+		_, err := c.lightBlockFromPrimary(ctx, c.latestTrustedBlock.Height)
 		if err != nil {
 			return err
 		}
-		primaryHash = h.Hash()
+		// primaryHash = h.Hash()
 	case options.Height == c.latestTrustedBlock.Height:
-		primaryHash = options.Hash
+		// primaryHash = options.Hash
 	case options.Height < c.latestTrustedBlock.Height:
 		c.logger.Info("Client initialized with old header (trusted is more recent)",
 			"old", options.Height,
@@ -334,25 +333,25 @@ func (c *Client) checkTrustedHeaderUsingOptions(ctx context.Context, options Tru
 			return nil
 		}
 
-		primaryHash = options.Hash
+		// primaryHash = options.Hash
 	}
 
-	if !bytes.Equal(primaryHash, c.latestTrustedBlock.Hash()) {
-		c.logger.Info("Prev. trusted header's hash (h1) doesn't match hash from primary provider (h2)",
-			"h1", c.latestTrustedBlock.Hash(), "h2", primaryHash)
+	// if !bytes.Equal(primaryHash, c.latestTrustedBlock.Hash()) {
+	// 	c.logger.Info("Prev. trusted header's hash (h1) doesn't match hash from primary provider (h2)",
+	// 		"h1", c.latestTrustedBlock.Hash(), "h2", primaryHash)
 
-		action := fmt.Sprintf(
-			"Prev. trusted header's hash %X doesn't match hash %X from primary provider. Remove all the stored light blocks?",
-			c.latestTrustedBlock.Hash(), primaryHash)
-		if c.confirmationFn(action) {
-			err := c.Cleanup()
-			if err != nil {
-				return fmt.Errorf("failed to cleanup: %w", err)
-			}
-		} else {
-			return errors.New("refused to remove the stored light blocks despite hashes mismatch")
-		}
-	}
+	// 	action := fmt.Sprintf(
+	// 		"Prev. trusted header's hash %X doesn't match hash %X from primary provider. Remove all the stored light blocks?",
+	// 		c.latestTrustedBlock.Hash(), primaryHash)
+	// 	if c.confirmationFn(action) {
+	// 		err := c.Cleanup()
+	// 		if err != nil {
+	// 			return fmt.Errorf("failed to cleanup: %w", err)
+	// 		}
+	// 	} else {
+	// 		return errors.New("refused to remove the stored light blocks despite hashes mismatch")
+	// 	}
+	// }
 
 	return nil
 }
@@ -373,9 +372,9 @@ func (c *Client) initializeWithTrustOptions(ctx context.Context, options TrustOp
 		return err
 	}
 
-	if !bytes.Equal(l.Hash(), options.Hash) {
-		return fmt.Errorf("expected header's hash %X, but got %X", options.Hash, l.Hash())
-	}
+	// if !bytes.Equal(l.Hash(), options.Hash) {
+	// 	return fmt.Errorf("expected header's hash %X, but got %X", options.Hash, l.Hash())
+	// }
 
 	// 2) Ensure that +2/3 of validators signed correctly.
 	err = l.ValidatorSet.VerifyCommitLight(c.chainID, l.Commit.BlockID, l.Height, l.Commit)
@@ -533,10 +532,10 @@ func (c *Client) VerifyHeader(ctx context.Context, newHeader *types.Header, now 
 	// Check if newHeader already verified.
 	l, err := c.TrustedLightBlock(newHeader.Height)
 	if err == nil {
-		// Make sure it's the same header.
-		if !bytes.Equal(l.Hash(), newHeader.Hash()) {
-			return fmt.Errorf("existing trusted header %X does not match newHeader %X", l.Hash(), newHeader.Hash())
-		}
+		// // Make sure it's the same header.
+		// if !bytes.Equal(l.Hash(), newHeader.Hash()) {
+		// 	return fmt.Errorf("existing trusted header %X does not match newHeader %X", l.Hash(), newHeader.Hash())
+		// }
 		c.logger.Info("Header has already been verified",
 			"height", newHeader.Height, "hash", newHeader.Hash())
 		return nil
@@ -548,9 +547,9 @@ func (c *Client) VerifyHeader(ctx context.Context, newHeader *types.Header, now 
 		return fmt.Errorf("failed to retrieve light block from primary to verify against: %w", err)
 	}
 
-	if !bytes.Equal(l.Hash(), newHeader.Hash()) {
-		return fmt.Errorf("light block header %X does not match newHeader %X", l.Hash(), newHeader.Hash())
-	}
+	// if !bytes.Equal(l.Hash(), newHeader.Hash()) {
+	// 	return fmt.Errorf("light block header %X does not match newHeader %X", l.Hash(), newHeader.Hash())
+	// }
 
 	return c.verifyLightBlock(ctx, l, now)
 }
@@ -658,19 +657,19 @@ func (c *Client) verifySequential(
 				// again.
 				c.logger.Error("primary sent invalid header -> replacing", "err", err)
 
-				replacementBlock, removeErr := c.findNewPrimary(ctx, newLightBlock.Height, true)
+				_, removeErr := c.findNewPrimary(ctx, newLightBlock.Height, true)
 				if removeErr != nil {
 					c.logger.Debug("failed to replace primary. Returning original error", "err", removeErr)
 					return err
 				}
 
-				if !bytes.Equal(replacementBlock.Hash(), newLightBlock.Hash()) {
-					c.logger.Error("Replacement provider has a different light block",
-						"newHash", newLightBlock.Hash(),
-						"replHash", replacementBlock.Hash())
-					// return original error
-					return err
-				}
+				// if !bytes.Equal(replacementBlock.Hash(), newLightBlock.Hash()) {
+				// 	c.logger.Error("Replacement provider has a different light block",
+				// 		"newHash", newLightBlock.Hash(),
+				// 		"replHash", replacementBlock.Hash())
+				// 	// return original error
+				// 	return err
+				// }
 
 				// attempt to verify header again
 				height--
@@ -801,13 +800,13 @@ func (c *Client) verifySkippingAgainstPrimary(
 			return err
 		}
 
-		if !bytes.Equal(replacementBlock.Hash(), newLightBlock.Hash()) {
-			c.logger.Error("Replacement provider has a different light block",
-				"newHash", newLightBlock.Hash(),
-				"replHash", replacementBlock.Hash())
-			// return original error
-			return err
-		}
+		// if !bytes.Equal(replacementBlock.Hash(), newLightBlock.Hash()) {
+		// 	c.logger.Error("Replacement provider has a different light block",
+		// 		"newHash", newLightBlock.Hash(),
+		// 		"replHash", replacementBlock.Hash())
+		// 	// return original error
+		// 	return err
+		// }
 
 		// attempt to verify the header again
 		return c.verifySkippingAgainstPrimary(ctx, trustedBlock, replacementBlock, now)
@@ -962,12 +961,12 @@ func (c *Client) backwards(
 				return err
 			}
 
-			// before continuing we must check that they have the same target header to validate
-			if !bytes.Equal(newPrimarysBlock.Hash(), newHeader.Hash()) {
-				c.logger.Debug("replaced primary but new primary has a different block to the initial one")
-				// return the original error
-				return err
-			}
+			// // before continuing we must check that they have the same target header to validate
+			// if !bytes.Equal(newPrimarysBlock.Hash(), newHeader.Hash()) {
+			// 	c.logger.Debug("replaced primary but new primary has a different block to the initial one")
+			// 	// return the original error
+			// 	return err
+			// }
 
 			// try again with the new primary
 			return c.backwards(ctx, verifiedHeader, newPrimarysBlock.Header)

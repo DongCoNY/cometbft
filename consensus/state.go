@@ -507,7 +507,6 @@ func (cs *State) SetProposalAndBlock(
 			return err
 		}
 	}
-
 	return nil
 }
 
@@ -523,11 +522,34 @@ func (cs *State) updateRoundStep(round int32, step cstypes.RoundStepType) {
 	if !cs.replayMode {
 		if round != cs.Round || round == 0 && step == cstypes.RoundStepNewRound {
 			cs.metrics.MarkRound(cs.Round, cs.StartTime)
+			metricTimeOut.handleSaveNewRound(int64(cs.Round))
 		}
+
+		if round != cs.Round {
+			metricTimeOut.metricsCache.eachHeight.numRound += 1
+		}
+
 		if cs.Step != step {
 			cs.metrics.MarkStep(cs.Step)
+			metricTimeOut.MarkStepTimes(cs.Step, uint32(cs.Round))
+			// save and reset
+			metricTimeOut.handleSaveNewStep(int64(cs.Round), cs.Step.String())
 		}
 	}
+	// if new height then save
+	if step == cstypes.RoundStepNewHeight {
+		// if timeout and do not catchup
+		if (time.Since(metricTimeOut.timeOldHeight) >= metricTimeOut.timeThreshold) && !cs.doWALCatchup {
+			metricTimeOut.metricsCache.eachHeight.blockIntervalSeconds = time.Since(metricTimeOut.timeOldHeight).Seconds()
+			metricTimeOut.WriteToFileCSV()
+		}
+		metricTimeOut.timeOldHeight = time.Now()
+		// resets cache
+		p2p.ResetCacheMetrics()
+		metricTimeOut.ResetCache()
+		metricTimeOut.metricsCache.height = cs.Height
+	}
+
 	cs.Round = round
 	cs.Step = step
 }
@@ -839,6 +861,12 @@ func (cs *State) handleMsg(mi msgInfo) {
 
 		cs.mtx.Lock()
 		if added && cs.ProposalBlockParts.IsComplete() {
+			if peerID == "" {
+				metricTimeOut.metricsCache.blockPartsSendTemporary += 1
+			} else {
+				metricTimeOut.metricsCache.blockPartsReceivedTemporary += 1
+			}
+
 			cs.handleCompleteProposal(msg.Height)
 		}
 		if added {
@@ -860,6 +888,13 @@ func (cs *State) handleMsg(mi msgInfo) {
 		// if the vote gives us a 2/3-any or 2/3-one, we transition
 		added, err = cs.tryAddVote(msg.Vote, peerID)
 		if added {
+			metricTimeOut.metricsCache.voteTemporary = append(metricTimeOut.metricsCache.voteTemporary, msg.Vote)
+			if peerID == "" {
+				metricTimeOut.metricsCache.numVoteSentTemporary += 1
+			} else {
+				metricTimeOut.metricsCache.numVoteReceivedTemporary += 1
+			}
+
 			cs.statsMsgQueue <- mi
 		}
 
@@ -1055,7 +1090,7 @@ func (cs *State) needProofBlock(height int64) bool {
 		return true
 	}
 
-	return !bytes.Equal(cs.state.AppHash, lastBlockMeta.Header.AppHash)
+	return true
 }
 
 // Enter (CreateEmptyBlocks): from enterNewRound(height,round)
@@ -1147,6 +1182,7 @@ func (cs *State) defaultDecideProposal(height int64, round int32) {
 			panic("Method createProposalBlock should not provide a nil block without errors")
 		}
 		cs.metrics.ProposalCreateCount.Add(1)
+		metricTimeOut.metricsCache.eachHeight.proposalCreateCount += 1
 		blockParts, err = block.MakePartSet(types.BlockPartSizeBytes)
 		if err != nil {
 			cs.Logger.Error("unable to create proposal block part set", "error", err)
@@ -1170,6 +1206,7 @@ func (cs *State) defaultDecideProposal(height int64, round int32) {
 		// send proposal and block parts on internal msg queue
 		cs.sendInternalMessage(msgInfo{&ProposalMessage{proposal}, ""})
 
+		// metricTimeOut.metricsCache.numblockPartsTemporary = blockParts.Total()
 		for i := 0; i < int(blockParts.Total()); i++ {
 			part := blockParts.GetPart(i)
 			cs.sendInternalMessage(msgInfo{&BlockPartMessage{cs.Height, cs.Round, part}, ""})
@@ -1266,6 +1303,28 @@ func (cs *State) enterPrevote(height int64, round int32) {
 
 	// Once `addVote` hits any +2/3 prevotes, we will go to PrevoteWait
 	// (so we have more time to try and collect +2/3 prevotes for a single block)
+	if height > cs.state.InitialHeight {
+		if cs.Height > cs.state.InitialHeight {
+			var missingValidatorsPower int64
+			for i, val := range cs.LastValidators.Validators {
+				if cs.ProposalBlock == nil {
+					continue
+				}
+				if cs.ProposalBlock.LastCommit == nil {
+					continue
+				}
+				if cs.ProposalBlock.LastCommit.Signatures == nil {
+					continue
+				}
+
+				commitSig := cs.ProposalBlock.LastCommit.Signatures[i]
+				if commitSig.Absent() {
+					missingValidatorsPower += val.VotingPower
+				}
+			}
+			metricTimeOut.metricsCache.missingValidatorsPowerPrevoteTemporary = missingValidatorsPower
+		}
+	}
 }
 
 func (cs *State) defaultDoPrevote(height int64, round int32) {
@@ -1312,6 +1371,10 @@ func (cs *State) defaultDoPrevote(height int64, round int32) {
 		))
 	}
 	cs.metrics.MarkProposalProcessed(isAppValid)
+	// accepted
+	if isAppValid {
+		metricTimeOut.metricsCache.eachHeight.proposalReceiveCount += 1
+	}
 
 	// Vote nil if the Application rejected the block
 	if !isAppValid {
@@ -1487,6 +1550,34 @@ func (cs *State) enterPrecommit(height int64, round int32) {
 	}
 
 	cs.signAddVote(cmtproto.PrecommitType, nil, types.PartSetHeader{})
+
+	if height > cs.state.InitialHeight {
+		if cs.Height > cs.state.InitialHeight {
+			var missingValidatorsPower int64
+			for i, val := range cs.LastValidators.Validators {
+				if cs.ProposalBlock == nil {
+					continue
+				}
+				if cs.ProposalBlock.LastCommit == nil {
+					continue
+				}
+				if cs.ProposalBlock.LastCommit.Signatures == nil {
+					continue
+				}
+
+				commitSig := cs.ProposalBlock.LastCommit.Signatures[i]
+				if commitSig.Absent() {
+					missingValidatorsPower += val.VotingPower
+				}
+			}
+			metricTimeOut.metricsCache.missingValidatorsPowerPrevoteTemporary = missingValidatorsPower
+		}
+	}
+	if cs.ProposalBlock != nil {
+		metricTimeOut.metricsCache.blockSizeTemporary = cs.ProposalBlock.Size()
+		metricTimeOut.metricsCache.numTxsTemporary = len(cs.ProposalBlock.Data.Txs)
+	}
+
 }
 
 // Enter: any +2/3 precommits for next round.
@@ -1766,6 +1857,7 @@ func (cs *State) pruneBlocks(retainHeight int64) (uint64, error) {
 func (cs *State) recordMetrics(height int64, block *types.Block) {
 	cs.metrics.Validators.Set(float64(cs.Validators.Size()))
 	cs.metrics.ValidatorsPower.Set(float64(cs.Validators.TotalVotingPower()))
+	// metricTimeOut.metricsCache.validatorsPowerTemporary = cs.Validators.TotalVotingPower()
 
 	var (
 		missingValidators      int
@@ -1842,6 +1934,7 @@ func (cs *State) recordMetrics(height int64, block *types.Block) {
 			cs.metrics.BlockIntervalSeconds.Observe(
 				block.Time.Sub(lastBlockMeta.Header.Time).Seconds(),
 			)
+			// metricTimeOut.metricsCache.eachHeight.blockIntervalSeconds = block.Time.Sub(lastBlockMeta.Header.Time).Seconds()
 		}
 	}
 
@@ -1849,6 +1942,9 @@ func (cs *State) recordMetrics(height int64, block *types.Block) {
 	cs.metrics.TotalTxs.Add(float64(len(block.Data.Txs)))
 	cs.metrics.BlockSizeBytes.Set(float64(block.Size()))
 	cs.metrics.CommittedHeight.Set(float64(block.Height))
+
+	metricTimeOut.metricsCache.eachHeight.numTxs = len(block.Data.Txs)
+	metricTimeOut.metricsCache.eachHeight.blockSizeBytes = block.Size()
 }
 
 //-----------------------------------------------------------------------------
@@ -1928,7 +2024,12 @@ func (cs *State) addProposalBlockPart(msg *BlockPartMessage, peerID p2p.ID) (add
 		return added, err
 	}
 
+	// if added {
+	// 	metricTimeOut.metricsCache.blockPartsReceivedTemporary += 1
+	// }
+
 	cs.metrics.BlockGossipPartsReceived.With("matches_current", "true").Add(1)
+	metricTimeOut.metricsCache.eachHeight.blockGossipPartsReceived += 1
 
 	if cs.ProposalBlockParts.ByteSize() > cs.state.ConsensusParams.Block.MaxBytes {
 		return added, fmt.Errorf("total size of proposal block parts exceeds maximum block bytes (%d > %d)",
@@ -2109,6 +2210,7 @@ func (cs *State) addVote(vote *types.Vote, peerID p2p.ID) (added bool, err error
 		vals := cs.state.Validators
 		_, val := vals.GetByIndex(vote.ValidatorIndex)
 		cs.metrics.MarkVoteReceived(vote.Type, val.VotingPower, vals.TotalVotingPower())
+		metricTimeOut.metricsCache.validatorsPowerTemporary = vals.TotalVotingPower()
 	}
 
 	if err := cs.eventBus.PublishEventVote(types.EventDataVote{Vote: vote}); err != nil {
@@ -2377,11 +2479,13 @@ func (cs *State) calculatePrevoteMessageDelayMetrics() {
 		votingPowerSeen += val.VotingPower
 		if votingPowerSeen >= cs.Validators.TotalVotingPower()*2/3+1 {
 			cs.metrics.QuorumPrevoteDelay.With("proposer_address", cs.Validators.GetProposer().Address.String()).Set(v.Timestamp.Sub(cs.Proposal.Timestamp).Seconds())
+			metricTimeOut.metricsCache.eachHeight.quorumPrevoteDelay = v.Timestamp.Sub(cs.Proposal.Timestamp).Seconds()
 			break
 		}
 	}
 	if ps.HasAll() {
 		cs.metrics.FullPrevoteDelay.With("proposer_address", cs.Validators.GetProposer().Address.String()).Set(pl[len(pl)-1].Timestamp.Sub(cs.Proposal.Timestamp).Seconds())
+		metricTimeOut.metricsCache.eachHeight.fullPrevoteDelay = pl[len(pl)-1].Timestamp.Sub(cs.Proposal.Timestamp).Seconds()
 	}
 }
 

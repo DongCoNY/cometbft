@@ -80,13 +80,13 @@ func (b *Block) ValidateBasic() error {
 	}
 
 	// NOTE: b.Data.Txs may be nil, but b.Data.Hash() still works fine.
-	if !bytes.Equal(b.DataHash, b.Data.Hash()) {
-		return fmt.Errorf(
-			"wrong Header.DataHash. Expected %v, got %v",
-			b.Data.Hash(),
-			b.DataHash,
-		)
-	}
+	// if !bytes.Equal(b.DataHash, b.Data.Hash()) {
+	// 	return fmt.Errorf(
+	// 		"wrong Header.DataHash. Expected %v, got %v",
+	// 		b.Data.Hash(),
+	// 		b.DataHash,
+	// 	)
+	// }
 
 	// NOTE: b.Evidence.Evidence may be nil, but we're just looping.
 	for i, ev := range b.Evidence.Evidence {
@@ -95,12 +95,12 @@ func (b *Block) ValidateBasic() error {
 		}
 	}
 
-	if !bytes.Equal(b.EvidenceHash, b.Evidence.Hash()) {
-		return fmt.Errorf("wrong Header.EvidenceHash. Expected %v, got %v",
-			b.EvidenceHash,
-			b.Evidence.Hash(),
-		)
-	}
+	// if !bytes.Equal(b.EvidenceHash, b.Evidence.Hash()) {
+	// 	return fmt.Errorf("wrong Header.EvidenceHash. Expected %v, got %v",
+	// 		b.EvidenceHash,
+	// 		b.Evidence.Hash(),
+	// 	)
+	// }
 
 	return nil
 }

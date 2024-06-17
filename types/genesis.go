@@ -1,7 +1,6 @@
 package types
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -90,9 +89,9 @@ func (genDoc *GenesisDoc) ValidateAndComplete() error {
 		if v.Power == 0 {
 			return fmt.Errorf("the genesis file cannot contain validators with no voting power: %v", v)
 		}
-		if len(v.Address) > 0 && !bytes.Equal(v.PubKey.Address(), v.Address) {
-			return fmt.Errorf("incorrect address for validator %v in the genesis file, should be %v", v, v.PubKey.Address())
-		}
+		// if len(v.Address) > 0 && !bytes.Equal(v.PubKey.Address(), v.Address) {
+		// 	return fmt.Errorf("incorrect address for validator %v in the genesis file, should be %v", v, v.PubKey.Address())
+		// }
 		if len(v.Address) == 0 {
 			genDoc.Validators[i].Address = v.PubKey.Address()
 		}

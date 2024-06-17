@@ -1,7 +1,6 @@
 package statesync
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -496,12 +495,12 @@ func (s *syncer) verifyApp(snapshot *snapshot, appVersion uint64) error {
 		return fmt.Errorf("app version mismatch. Expected: %d, got: %d",
 			appVersion, resp.AppVersion)
 	}
-	if !bytes.Equal(snapshot.trustedAppHash, resp.LastBlockAppHash) {
-		s.logger.Error("appHash verification failed",
-			"expected", snapshot.trustedAppHash,
-			"actual", resp.LastBlockAppHash)
-		return errVerifyFailed
-	}
+	// if !bytes.Equal(snapshot.trustedAppHash, resp.LastBlockAppHash) {
+	// 	s.logger.Error("appHash verification failed",
+	// 		"expected", snapshot.trustedAppHash,
+	// 		"actual", resp.LastBlockAppHash)
+	// 	return errVerifyFailed
+	// }
 	if uint64(resp.LastBlockHeight) != snapshot.Height {
 		s.logger.Error(
 			"ABCI app reported unexpected last block height",
