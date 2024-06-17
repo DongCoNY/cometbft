@@ -533,7 +533,7 @@ func (cs *State) updateRoundStep(round int32, step cstypes.RoundStepType) {
 			cs.metrics.MarkStep(cs.Step)
 			metricTimeOut.MarkStepTimes(cs.Step, uint32(cs.Round))
 			// save and reset
-			metricTimeOut.handleSaveNewStep(int64(cs.Round), step.String())
+			metricTimeOut.handleSaveNewStep(int64(cs.Round), cs.Step.String())
 		}
 	}
 	// if new height then save
@@ -950,6 +950,7 @@ func (cs *State) handleTimeout(ti timeoutInfo, rs cstypes.RoundState) {
 		cs.enterNewRound(ti.Height, 0)
 
 	case cstypes.RoundStepNewRound:
+		fmt.Println("1111111")
 		cs.enterPropose(ti.Height, ti.Round)
 
 	case cstypes.RoundStepPropose:
@@ -1000,6 +1001,7 @@ func (cs *State) handleTxsAvailable() {
 		cs.scheduleTimeout(timeoutCommit, cs.Height, 0, cstypes.RoundStepNewRound)
 
 	case cstypes.RoundStepNewRound: // after timeoutCommit
+		fmt.Println("222222")
 		cs.enterPropose(cs.Height, 0)
 	}
 }
@@ -1072,6 +1074,7 @@ func (cs *State) enterNewRound(height int64, round int32) {
 				cstypes.RoundStepNewRound)
 		}
 	} else {
+		fmt.Println("333333")
 		cs.enterPropose(height, round)
 	}
 }
@@ -1296,6 +1299,7 @@ func (cs *State) enterPrevote(height int64, round int32) {
 	defer func() {
 		// Done enterPrevote:
 		cs.updateRoundStep(round, cstypes.RoundStepPrevote)
+		metricTimeOut.metricsCache.timeProsal = append(metricTimeOut.metricsCache.timeProsal, prosalTime{round: int(round), numlog: 4, stepStart: time.Now()})
 		cs.newStep()
 	}()
 
@@ -1303,6 +1307,7 @@ func (cs *State) enterPrevote(height int64, round int32) {
 
 	// Sign and broadcast vote as necessary
 	cs.doPrevote(height, round)
+	metricTimeOut.metricsCache.timeProsal = append(metricTimeOut.metricsCache.timeProsal, prosalTime{round: int(round), numlog: 3, stepStart: time.Now()})
 
 	// Once `addVote` hits any +2/3 prevotes, we will go to PrevoteWait
 	// (so we have more time to try and collect +2/3 prevotes for a single block)
