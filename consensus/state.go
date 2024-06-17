@@ -533,7 +533,7 @@ func (cs *State) updateRoundStep(round int32, step cstypes.RoundStepType) {
 			cs.metrics.MarkStep(cs.Step)
 			metricTimeOut.MarkStepTimes(cs.Step, uint32(cs.Round))
 			// save and reset
-			metricTimeOut.handleSaveNewStep(int64(cs.Round), step.String())
+			metricTimeOut.handleSaveNewStep(int64(cs.Round), cs.Step.String())
 		}
 	}
 	// if new height then save
