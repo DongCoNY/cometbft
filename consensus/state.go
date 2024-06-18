@@ -1125,7 +1125,6 @@ func (cs *State) enterPropose(height int64, round int32) {
 		// else, we'll enterPrevote when the rest of the proposal is received (in AddProposalBlockPart),
 		// or else after timeoutPropose
 		if cs.isProposalComplete() {
-			metricTimeOut.metricsCache.timeProsal = append(metricTimeOut.metricsCache.timeProsal, prosalTime{round: int(round), numlog: 2, stepStart: time.Now()})
 			cs.enterPrevote(height, cs.Round)
 		}
 	}()
@@ -1304,7 +1303,7 @@ func (cs *State) enterPrevote(height int64, round int32) {
 	}()
 
 	logger.Debug("entering prevote step", "current", log.NewLazySprintf("%v/%v/%v", cs.Height, cs.Round, cs.Step))
-
+	metricTimeOut.metricsCache.timeProsal = append(metricTimeOut.metricsCache.timeProsal, prosalTime{round: int(round), numlog: 2, stepStart: time.Now()})
 	// Sign and broadcast vote as necessary
 	cs.doPrevote(height, round)
 	metricTimeOut.metricsCache.timeProsal = append(metricTimeOut.metricsCache.timeProsal, prosalTime{round: int(round), numlog: 3, stepStart: time.Now()})
