@@ -180,6 +180,7 @@ func (m *MetricsThreshold) WriteToFileCSV() {
 	if metricTimeOut.metricsCache.eachHeight.blockIntervalSeconds > 5 {
 		m.metricsCache.isLongBlock = true
 		m.CSVP2P()
+		m.CSVRoundVoteSet()
 	} else {
 		m.metricsCache.isLongBlock = false
 	}
@@ -189,7 +190,6 @@ func (m *MetricsThreshold) WriteToFileCSV() {
 	m.CSVProposalStep()
 	m.CSVTimeStep()
 	m.CSVVoteStep()
-	m.CSVRoundVoteSet()
 }
 
 func NopCacheMetricsCache() metricsCache {
