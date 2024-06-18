@@ -787,6 +787,7 @@ func (cs *State) receiveRoutine(maxSteps int) {
 
 			// handles proposals, block parts, votes
 			// may generate internal events (votes, complete proposals, 2/3 majorities)
+			metricTimeOut.metricsCache.timeProsal = append(metricTimeOut.metricsCache.timeProsal, prosalTime{round: int(cs.Round), numlog: 9, stepStart: time.Now()})
 			cs.handleMsg(mi)
 
 		case mi = <-cs.internalMsgQueue:
@@ -807,6 +808,7 @@ func (cs *State) receiveRoutine(maxSteps int) {
 			}
 
 			// handles proposals, block parts, votes
+			metricTimeOut.metricsCache.timeProsal = append(metricTimeOut.metricsCache.timeProsal, prosalTime{round: int(cs.Round), numlog: 8, stepStart: time.Now()})
 			cs.handleMsg(mi)
 
 		case ti := <-cs.timeoutTicker.Chan(): // tockChan:
@@ -866,6 +868,7 @@ func (cs *State) handleMsg(mi msgInfo) {
 			} else {
 				metricTimeOut.metricsCache.blockPartsReceivedTemporary += 1
 			}
+			metricTimeOut.metricsCache.timeProsal = append(metricTimeOut.metricsCache.timeProsal, prosalTime{round: int(cs.Round), numlog: 7, stepStart: time.Now()})
 
 			cs.handleCompleteProposal(msg.Height)
 		}
