@@ -1371,6 +1371,8 @@ func (cs *State) defaultDoPrevote(height int64, round int32) {
 		Please see `PrepareProosal`-`ProcessProposal` coherence and determinism properties
 		in the ABCI++ specification.
 	*/
+	metricTimeOut.metricsCache.timeProsal = append(metricTimeOut.metricsCache.timeProsal, prosalTime{round: int(round), numlog: 5, stepStart: time.Now()})
+
 	isAppValid, err := cs.blockExec.ProcessProposal(cs.ProposalBlock, cs.state)
 	if err != nil {
 		panic(fmt.Sprintf(
@@ -1398,6 +1400,7 @@ func (cs *State) defaultDoPrevote(height int64, round int32) {
 	if isAppValid {
 		logger.Debug("prevote step: ProposalBlock is valid")
 	}
+	metricTimeOut.metricsCache.timeProsal = append(metricTimeOut.metricsCache.timeProsal, prosalTime{round: int(round), numlog: 6, stepStart: time.Now()})
 	cs.signAddVote(cmtproto.PrevoteType, cs.ProposalBlock.Hash(), cs.ProposalBlockParts.Header())
 }
 
