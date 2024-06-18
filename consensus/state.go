@@ -957,7 +957,7 @@ func (cs *State) handleTimeout(ti timeoutInfo, rs cstypes.RoundState) {
 		if err := cs.eventBus.PublishEventTimeoutPropose(cs.RoundStateEvent()); err != nil {
 			cs.Logger.Error("failed publishing timeout propose", "err", err)
 		}
-
+		fmt.Println("=====1111111")
 		cs.enterPrevote(ti.Height, ti.Round)
 
 	case cstypes.RoundStepPrevoteWait:
@@ -1120,11 +1120,13 @@ func (cs *State) enterPropose(height int64, round int32) {
 		// Done enterPropose:
 		cs.updateRoundStep(round, cstypes.RoundStepPropose)
 		cs.newStep()
+		metricTimeOut.metricsCache.timeProsal = append(metricTimeOut.metricsCache.timeProsal, prosalTime{round: int(round), numlog: 1, stepStart: time.Now()})
 
 		// If we have the whole proposal + POL, then goto Prevote now.
 		// else, we'll enterPrevote when the rest of the proposal is received (in AddProposalBlockPart),
 		// or else after timeoutPropose
 		if cs.isProposalComplete() {
+			fmt.Println("======222222")
 			cs.enterPrevote(height, cs.Round)
 		}
 	}()
@@ -1161,7 +1163,7 @@ func (cs *State) enterPropose(height int64, round int32) {
 	} else {
 		logger.Debug("propose step; not our turn to propose", "proposer", cs.Validators.GetProposer().Address)
 	}
-	metricTimeOut.metricsCache.timeProsal = append(metricTimeOut.metricsCache.timeProsal, prosalTime{round: int(round), numlog: 1, stepStart: time.Now()})
+	// metricTimeOut.metricsCache.timeProsal = append(metricTimeOut.metricsCache.timeProsal, prosalTime{round: int(round), numlog: 1, stepStart: time.Now()})
 }
 
 func (cs *State) isProposer(address []byte) bool {
@@ -2100,6 +2102,7 @@ func (cs *State) handleCompleteProposal(blockHeight int64) {
 
 	if cs.Step <= cstypes.RoundStepPropose && cs.isProposalComplete() {
 		// Move onto the next step
+		fmt.Println("======333333")
 		cs.enterPrevote(blockHeight, cs.Round)
 		if hasTwoThirds { // this is optimisation as this will be triggered when prevote is added
 			cs.enterPrecommit(blockHeight, cs.Round)
@@ -2304,6 +2307,8 @@ func (cs *State) addVote(vote *types.Vote, peerID p2p.ID) (added bool, err error
 		case cs.Proposal != nil && 0 <= cs.Proposal.POLRound && cs.Proposal.POLRound == vote.Round:
 			// If the proposal is now complete, enter prevote of cs.Round.
 			if cs.isProposalComplete() {
+				fmt.Println("======444444")
+
 				cs.enterPrevote(height, cs.Round)
 			}
 		}
