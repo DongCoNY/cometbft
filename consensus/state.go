@@ -526,7 +526,7 @@ func (cs *State) updateRoundStep(round int32, step cstypes.RoundStepType) {
 		}
 
 		if round != cs.Round {
-			metricTimeOut.metricsCache.eachHeight.numRound += 1
+			metricTimeOut.metricsCache.eachHeight.numRound = int(round) + 1
 		}
 
 		if cs.Step != step {
