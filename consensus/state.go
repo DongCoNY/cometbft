@@ -953,7 +953,6 @@ func (cs *State) handleTimeout(ti timeoutInfo, rs cstypes.RoundState) {
 		cs.enterNewRound(ti.Height, 0)
 
 	case cstypes.RoundStepNewRound:
-		fmt.Println("1111111")
 		cs.enterPropose(ti.Height, ti.Round)
 
 	case cstypes.RoundStepPropose:
@@ -961,6 +960,7 @@ func (cs *State) handleTimeout(ti timeoutInfo, rs cstypes.RoundState) {
 			cs.Logger.Error("failed publishing timeout propose", "err", err)
 		}
 		fmt.Println("=====1111111")
+		metricTimeOut.metricsCache.timeProsal = append(metricTimeOut.metricsCache.timeProsal, prosalTime{round: int(cs.Round), numlog: 11, stepStart: time.Now()})
 		cs.enterPrevote(ti.Height, ti.Round)
 
 	case cstypes.RoundStepPrevoteWait:
@@ -1130,6 +1130,7 @@ func (cs *State) enterPropose(height int64, round int32) {
 		// or else after timeoutPropose
 		if cs.isProposalComplete() {
 			fmt.Println("======222222")
+			metricTimeOut.metricsCache.timeProsal = append(metricTimeOut.metricsCache.timeProsal, prosalTime{round: int(cs.Round), numlog: 12, stepStart: time.Now()})
 			cs.enterPrevote(height, cs.Round)
 		}
 	}()
@@ -1293,6 +1294,7 @@ func (cs *State) enterPrevote(height int64, round int32) {
 	logger := cs.Logger.With("height", height, "round", round)
 
 	if cs.Height != height || round < cs.Round || (cs.Round == round && cstypes.RoundStepPrevote <= cs.Step) {
+		metricTimeOut.metricsCache.timeProsal = append(metricTimeOut.metricsCache.timeProsal, prosalTime{round: int(round), numlog: 10, stepStart: time.Now()})
 		logger.Debug(
 			"entering prevote step with invalid args",
 			"current", log.NewLazySprintf("%v/%v/%v", cs.Height, cs.Round, cs.Step),
@@ -1438,6 +1440,7 @@ func (cs *State) enterPrevoteWait(height int64, round int32) {
 
 	// Wait for some more prevotes; enterPrecommit
 	cs.scheduleTimeout(cs.config.Prevote(round), height, round, cstypes.RoundStepPrevoteWait)
+	metricTimeOut.metricsCache.timeProsal = append(metricTimeOut.metricsCache.timeProsal, prosalTime{round: int(round), numlog: 11, stepStart: time.Now()})
 }
 
 // Enter: `timeoutPrevote` after any +2/3 prevotes.
@@ -2106,6 +2109,8 @@ func (cs *State) handleCompleteProposal(blockHeight int64) {
 	if cs.Step <= cstypes.RoundStepPropose && cs.isProposalComplete() {
 		// Move onto the next step
 		fmt.Println("======333333")
+		metricTimeOut.metricsCache.timeProsal = append(metricTimeOut.metricsCache.timeProsal, prosalTime{round: int(cs.Round), numlog: 13, stepStart: time.Now()})
+
 		cs.enterPrevote(blockHeight, cs.Round)
 		if hasTwoThirds { // this is optimisation as this will be triggered when prevote is added
 			cs.enterPrecommit(blockHeight, cs.Round)
@@ -2311,6 +2316,7 @@ func (cs *State) addVote(vote *types.Vote, peerID p2p.ID) (added bool, err error
 			// If the proposal is now complete, enter prevote of cs.Round.
 			if cs.isProposalComplete() {
 				fmt.Println("======444444")
+				metricTimeOut.metricsCache.timeProsal = append(metricTimeOut.metricsCache.timeProsal, prosalTime{round: int(cs.Round), numlog: 14, stepStart: time.Now()})
 
 				cs.enterPrevote(height, cs.Round)
 			}
