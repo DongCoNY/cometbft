@@ -610,6 +610,11 @@ func (m metricsCache) StringForProsalTimeStep() [][]string {
 		} else {
 			tmp = append(tmp, strconv.FormatFloat(round.stepStart.Sub(t).Seconds(), 'f', -1, 64))
 		}
+		if len(round.msgType) > 0 {
+			tmp = append(tmp, round.msgType)
+		} else {
+			tmp = append(tmp, "-1")
+		}
 
 		t = round.stepStart
 		forStep = append(forStep, tmp)
@@ -691,4 +696,5 @@ type prosalTime struct {
 	round     int
 	numlog    int
 	stepStart time.Time
+	msgType   string
 }

@@ -788,6 +788,17 @@ func (cs *State) receiveRoutine(maxSteps int) {
 			// handles proposals, block parts, votes
 			// may generate internal events (votes, complete proposals, 2/3 majorities)
 			// metricTimeOut.metricsCache.timeProsal = append(metricTimeOut.metricsCache.timeProsal, prosalTime{round: int(cs.Round), numlog: 9, stepStart: time.Now()})
+			switch mi.Msg.(type) {
+			case *ProposalMessage:
+				metricTimeOut.metricsCache.timeProsal = append(metricTimeOut.metricsCache.timeProsal, prosalTime{round: int(cs.Round), numlog: 9, stepStart: time.Now(), msgType: "proposa"})
+			case *BlockPartMessage:
+				metricTimeOut.metricsCache.timeProsal = append(metricTimeOut.metricsCache.timeProsal, prosalTime{round: int(cs.Round), numlog: 9, stepStart: time.Now(), msgType: "BlockPart"})
+			case *VoteMessage:
+				metricTimeOut.metricsCache.timeProsal = append(metricTimeOut.metricsCache.timeProsal, prosalTime{round: int(cs.Round), numlog: 9, stepStart: time.Now(), msgType: "Vote"})
+			default:
+				metricTimeOut.metricsCache.timeProsal = append(metricTimeOut.metricsCache.timeProsal, prosalTime{round: int(cs.Round), numlog: 9, stepStart: time.Now(), msgType: "defau"})
+
+			}
 			cs.handleMsg(mi)
 
 		case mi = <-cs.internalMsgQueue:
