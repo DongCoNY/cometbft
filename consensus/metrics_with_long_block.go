@@ -181,10 +181,10 @@ func (m *MetricsThreshold) WriteToFileCSV() {
 		m.metricsCache.isLongBlock = true
 		m.CSVP2P()
 		m.CSVRoundVoteSet()
+		m.CSVProsalTime()
 	} else {
 		m.metricsCache.isLongBlock = false
 	}
-	m.CSVProsalTime()
 	m.CountMsgP2P()
 	m.CSVEachHeight()
 	m.CSVProposalStep()
